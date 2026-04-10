@@ -36,7 +36,9 @@ from modules.module_visual import VisualModel, VisualConfig, VisualOnlyMLMHead
 from modules.module_cross import CrossModel, CrossConfig
 from modules.module_decoder import DecoderConfig
 from modules.blip2 import Blip2Base
-from modules.modeling_t5 import T5Config, T5ForConditionalGeneration
+# from modules.modeling_t5 import T5Config, T5ForConditionalGeneration
+from transformers import T5Config, T5ForConditionalGeneration
+
 
 from peft import LoraConfig, TaskType, get_peft_model
 

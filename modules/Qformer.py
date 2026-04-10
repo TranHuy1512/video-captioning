@@ -36,10 +36,16 @@ from transformers.modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
-from transformers.modeling_utils import (
-    PreTrainedModel,
+# from transformers.modeling_utils import (
+#     PreTrainedModel,
+#     apply_chunking_to_forward,
+#     find_pruneable_heads_and_indices,
+#     prune_linear_layer,
+# )
+from transformers.modeling_utils import ( PreTrainedModel)
+from transformers.pytorch_utils import (
     apply_chunking_to_forward,
-    find_pruneable_heads_and_indices,
+    # find_pruneable_heads_and_indices,
     prune_linear_layer,
 )
 from transformers.utils import logging
@@ -47,6 +53,16 @@ from transformers.models.bert.configuration_bert import BertConfig
 
 logger = logging.get_logger(__name__)
 
+def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_heads):
+    mask = torch.ones(n_heads, head_size, dtype=torch.bool)
+    heads = set(heads) - already_pruned_heads
+
+    for head in heads:
+        shifted_head = head - sum(1 for h in already_pruned_heads if h < head)
+        mask[shifted_head] = False
+
+    index = torch.arange(n_heads * head_size)[mask.view(-1)].long()
+    return heads, index
 
 class BertEmbeddings(nn.Module):
     """Construct the embeddings from word and position embeddings."""
