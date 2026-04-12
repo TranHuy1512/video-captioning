@@ -27,5 +27,5 @@ build/
 htmlcov/
 .tox/
 venv/
-hyp.txt
-
+dataset-metadata.json
+ckpts/ver_2/

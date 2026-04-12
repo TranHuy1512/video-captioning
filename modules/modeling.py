@@ -104,9 +104,30 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
         assert model.visual is not None
 
         if state_dict is not None:
+            state_dict = cls._filter_init_model_state_dict(state_dict, task_config=task_config)
             model = cls.init_preweight(model, state_dict, task_config=task_config)
 
         return model
+
+    @staticmethod
+    def _filter_init_model_state_dict(state_dict, task_config=None):
+        allowed_prefixes = ("bert.", "visual.")
+        filtered_state_dict = state_dict.__class__(
+            (key, value) for key, value in state_dict.items()
+            if key.startswith(allowed_prefixes)
+        )
+        metadata = getattr(state_dict, "_metadata", None)
+        if metadata is not None:
+            filtered_state_dict._metadata = metadata
+
+        skipped = len(state_dict) - len(filtered_state_dict)
+        show_log(
+            task_config,
+            "Load init_model weights only for {} Skipped {} non-BERT/Visual tensors.".format(
+                ", ".join(allowed_prefixes), skipped
+            )
+        )
+        return filtered_state_dict
 
 class NormalizeVideo(nn.Module):
     def __init__(self, task_config):
@@ -272,7 +293,19 @@ class UniVL(UniVLPreTrainedModel):
             self.loss_fct = CrossEn() if self._stage_two else max_margin_ranking_loss
             self._pretrain_sim_loss_fct = max_margin_ranking_loss
 
-        self.apply(self.init_weights)
+        self._init_weights_except_pretrained_submodules()
+
+    def _init_weights_except_pretrained_submodules(self):
+        skip_roots = {"Qformer", "t5_model"}
+
+        def init_module(module):
+            for name, child in module._modules.items():
+                if child is None or name in skip_roots:
+                    continue
+                init_module(child)
+            self.init_weights(module)
+
+        init_module(self)
 
     def forward(self, input_ids, token_type_ids, attention_mask, video, video_mask=None,
                 pairs_masked_text=None, pairs_token_labels=None, masked_video=None, video_labels_index=None,
