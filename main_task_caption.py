@@ -82,6 +82,9 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument("--world_size", default=0, type=int, help="distribted training")
     parser.add_argument("--local_rank", default=None, type=int, help="distribted training")
     parser.add_argument('--coef_lr', type=float, default=0.1, help='coefficient for bert branch.')
+    parser.add_argument('--lr_qformer', type=float, default=5e-5, help='Learning rate for QFormer parameters.')
+    parser.add_argument('--lr_lora', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
+                        help='Learning rate for T5 LoRA/decoder parameters.')
     parser.add_argument('--use_mil', action='store_true', help="Whether use MIL as Miech et. al. (2020).")
     parser.add_argument('--sampled_use_mil', action='store_true', help="Whether use MIL, has a high priority than use_mil.")
 

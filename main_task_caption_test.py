@@ -96,6 +96,9 @@ def get_args(description='UniVL on Caption Task - Test Visual Encoder'):
     parser.add_argument("--world_size", default=0, type=int, help="distribted training")
     parser.add_argument("--local_rank", default=None, type=int, help="distribted training")
     parser.add_argument('--coef_lr', type=float, default=0.1, help='coefficient for bert branch.')
+    parser.add_argument('--lr_qformer', type=float, default=5e-5, help='Learning rate for QFormer parameters.')
+    parser.add_argument('--lr_lora', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
+                        help='Learning rate for T5 LoRA/decoder parameters.')
     parser.add_argument('--use_mil', action='store_true', help="Whether use MIL as Miech et. al. (2020).")
     parser.add_argument('--sampled_use_mil', action='store_true', help="Whether use MIL, has a high priority than use_mil.")
 
@@ -235,20 +238,43 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
+    def is_qformer_param(name):
+        return name.startswith(("Qformer.", "query_tokens", "qformer_visual_proj."))
+
+    def is_t5_decoder_param(name):
+        return name.startswith(("t5_model.", "t5_proj."))
+
+    def is_bert_param(name):
+        return name.startswith("bert.")
+
+    def is_other_param(name):
+        return not (is_bert_param(name) or is_qformer_param(name) or is_t5_decoder_param(name))
+
+    lr_qformer = getattr(args, "lr_qformer", args.lr)
+    lr_lora = getattr(args, "lr_lora", args.lr)
+
     no_decay_param_tp = [(n, p) for n, p in param_optimizer if not any(nd in n for nd in no_decay)]
     decay_param_tp = [(n, p) for n, p in param_optimizer if any(nd in n for nd in no_decay)]
 
-    no_decay_bert_param_tp = [(n, p) for n, p in no_decay_param_tp if "bert." in n]
-    no_decay_nobert_param_tp = [(n, p) for n, p in no_decay_param_tp if "bert." not in n]
+    no_decay_bert_param_tp = [(n, p) for n, p in no_decay_param_tp if is_bert_param(n)]
+    no_decay_qformer_param_tp = [(n, p) for n, p in no_decay_param_tp if is_qformer_param(n)]
+    no_decay_t5_decoder_param_tp = [(n, p) for n, p in no_decay_param_tp if is_t5_decoder_param(n)]
+    no_decay_other_param_tp = [(n, p) for n, p in no_decay_param_tp if is_other_param(n)]
 
-    decay_bert_param_tp = [(n, p) for n, p in decay_param_tp if "bert." in n]
-    decay_nobert_param_tp = [(n, p) for n, p in decay_param_tp if "bert." not in n]
+    decay_bert_param_tp = [(n, p) for n, p in decay_param_tp if is_bert_param(n)]
+    decay_qformer_param_tp = [(n, p) for n, p in decay_param_tp if is_qformer_param(n)]
+    decay_t5_decoder_param_tp = [(n, p) for n, p in decay_param_tp if is_t5_decoder_param(n)]
+    decay_other_param_tp = [(n, p) for n, p in decay_param_tp if is_other_param(n)]
 
     optimizer_grouped_parameters = [
         {'params': [p for n, p in no_decay_bert_param_tp], 'weight_decay': 0.01, 'lr': args.lr * coef_lr},
-        {'params': [p for n, p in no_decay_nobert_param_tp], 'weight_decay': 0.01},
+        {'params': [p for n, p in no_decay_qformer_param_tp], 'weight_decay': 0.01, 'lr': lr_qformer},
+        {'params': [p for n, p in no_decay_t5_decoder_param_tp], 'weight_decay': 0.01, 'lr': lr_lora},
+        {'params': [p for n, p in no_decay_other_param_tp], 'weight_decay': 0.01},
         {'params': [p for n, p in decay_bert_param_tp], 'weight_decay': 0.0, 'lr': args.lr * coef_lr},
-        {'params': [p for n, p in decay_nobert_param_tp], 'weight_decay': 0.0}
+        {'params': [p for n, p in decay_qformer_param_tp], 'weight_decay': 0.0, 'lr': lr_qformer},
+        {'params': [p for n, p in decay_t5_decoder_param_tp], 'weight_decay': 0.0, 'lr': lr_lora},
+        {'params': [p for n, p in decay_other_param_tp], 'weight_decay': 0.0}
     ]
 
     scheduler = None
