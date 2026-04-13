@@ -266,7 +266,7 @@ class UniVL(UniVLPreTrainedModel):
                     r=lora_r,
                     lora_alpha=lora_alpha,
                     lora_dropout=lora_dropout,
-                    target_modules=['q', 'v']
+                    target_modules=['q','k','v','o']
                 )
 
                 if lora:
@@ -544,7 +544,7 @@ class UniVL(UniVLPreTrainedModel):
             temperature=1,
             num_beams=self.beam_size,
             max_length=self.max_txt_len,
-            repetition_penalty=1.0,
+            repetition_penalty=1.2,
             length_penalty=1.0,
             num_return_sequences=self.beam_size,
             return_dict_in_generate=True,
@@ -619,7 +619,7 @@ class UniVL(UniVLPreTrainedModel):
                 do_sample=False,
                 num_beams=num_beams,
                 max_length=max_length,
-                repetition_penalty=1.0,
+                repetition_penalty=1.2,
                 length_penalty=1.0,
             )
 

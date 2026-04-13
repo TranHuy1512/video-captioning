@@ -29,3 +29,5 @@ htmlcov/
 venv/
 dataset-metadata.json
 ckpts/ver_2/
+run.ipynb
+.DS_Store
