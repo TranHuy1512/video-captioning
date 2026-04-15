@@ -53,7 +53,7 @@ class CorpusCider:
             scorer += (None, tokenized[idx])
         scorer.compute_doc_freq()
 
-        self._corpus_df = dict(scorer.document_frequency)
+        self._corpus_df = defaultdict(float, scorer.document_frequency)
         # ref_len = log(N) where N = number of documents (videos) in corpus
         self._corpus_ref_len = np.log(float(len(scorer.crefs)))
 
