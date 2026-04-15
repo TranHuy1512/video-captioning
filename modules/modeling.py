@@ -270,7 +270,7 @@ class UniVL(UniVLPreTrainedModel):
                 )
 
                 if lora:
-                    self.t5_model = get_peft_model(self.t5_model, peft_config)
+                    self.t5_model = get_peft_model(self.t5_model, peft_config, autocast_adapter_dtype=False)
                     self.t5_model.print_trainable_parameters()
 
                 self.t5_proj = nn.Linear(
