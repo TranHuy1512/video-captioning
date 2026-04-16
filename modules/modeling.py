@@ -638,8 +638,8 @@ class UniVL(UniVLPreTrainedModel):
                 inputs_embeds=inputs_embeds,
                 attention_mask=encoder_atts,
                 do_sample=True,
-                top_p=0.9,
-                temperature=1.0,
+                top_p=0.95,
+                temperature=1.2,
                 num_beams=1,
                 max_length=self.max_txt_len,
                 min_length=3,
@@ -678,7 +678,9 @@ class UniVL(UniVLPreTrainedModel):
             advantage = (reward - reward_baseline)  # (B, beam)
 
         # ── 3. Forward pass WITH GRAD for log probs ──
-        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.beam_size, dim=0)   # (B*beam, L, H)
+        # IMPORTANT: Detach inputs_embeds so SCST gradients only update T5 decoder (LoRA),
+        # NOT the QFormer/visual encoder. RL gradients are too noisy for the encoder.
+        repeated_inputs_embeds = inputs_embeds.detach().repeat_interleave(self.beam_size, dim=0)   # (B*beam, L, H)
         repeated_encoder_atts = encoder_atts.repeat_interleave(self.beam_size, dim=0)     # (B*beam, L)
 
         decoder_input_ids = generated_ids[:, :-1].contiguous()   # (B*beam, L-1)
@@ -702,6 +704,10 @@ class UniVL(UniVLPreTrainedModel):
         sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(batch_size, self.beam_size)
 
         # ── 4. SCST loss ──
+        # Normalize advantage to prevent gradient explosion from large CIDEr magnitudes
+        advantage_std = advantage.std()
+        if advantage_std > 1e-6:
+            advantage = advantage / advantage_std
         loss = -(sequences_scores * advantage.detach())
         return loss.mean()
 
