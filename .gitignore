@@ -28,7 +28,7 @@ htmlcov/
 .tox/
 venv/
 dataset-metadata.json
-ckpts/ver_2/
+# ckpts/ver_2/
 run.ipynb
 .DS_Store
 run_final.ipynb

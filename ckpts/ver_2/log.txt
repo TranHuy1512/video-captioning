@@ -1,0 +1,1823 @@
+Số lượng GPU khả dụng: 1
+  GPU 0: NVIDIA H100 80GB HBM3
+    Memory: 79.18 GB
+
+⚠ Chỉ có 1 GPU. Có thể train nhưng sẽ chậm hơn.
+  Cân nhắc giảm batch_size nếu gặp OOM error
+Cloning into 'video-captioning'...
+remote: Enumerating objects: 280, done.
+remote: Counting objects: 100% (280/280), done.
+remote: Compressing objects: 100% (185/185), done.
+remote: Total 280 (delta 113), reused 244 (delta 77), pack-reused 0 (from 0)
+Receiving objects: 100% (280/280), 4.27 MiB | 15.49 MiB/s, done.
+Resolving deltas: 100% (113/113), done.
+/workspace/project/video-captioning
+✓ BERT model downloaded successfully!
+total 421M
+-rw-r--r-- 1  501 staff  313 Oct 18  2018 bert_config.json
+-rw-r--r-- 1  501 staff 421M Nov 14  2018 pytorch_model.bin
+-rw-rw-r-- 1 root root  227K Nov 30  2018 vocab.txt
+Downloading UniVL pretrained weight (this may take a few minutes)...
+✓ UniVL pretrained weight downloaded!
+total 764M
+-rw-rw-r-- 1 root root 764M Dec  7  2021 univl.pretrained.bin
+Downloading MSRVTT dataset (this will take several minutes, ~1.2GB)...
+Extracting dataset...
+✓ MSRVTT dataset downloaded and extracted!
+total 314M
+-rw-rw-r-- 1 root root  73K Dec 18  2020 MSRVTT_JSFUSION_test.csv
+-rw-rw-r-- 1 root root  23M Dec 18  2020 MSRVTT_data.json
+-rw-rw-r-- 1 root root  68K Dec 18  2020 MSRVTT_train.7k.csv
+-rw-rw-r-- 1 root root  87K Dec 18  2020 MSRVTT_train.9k.csv
+-rw-rw-r-- 1 root root  246 Apr  8  2021 README.md
+-rw-rw-r-- 1 root root 292M Jan  5  2021 msrvtt_videos_features.pickle
+modules/bert-base-uncased/vocab.txt
+✓ Tokenizer vocab size: 30522
+
+Mẫu tokenization:
+  Text: A man is playing guitar on the stage
+  Tokens: ['a', 'man', 'is', 'playing', 'guitar', 'on', 'the', 'stage']
+  Token IDs: [1037, 2158, 2003, 2652, 2858, 2006, 1996, 2754]
+✓ Output directory: ckpts/ckpt_msrvtt_caption
+Số lượng GPU khả dụng: 1
+  GPU 0: NVIDIA H100 80GB HBM3
+    Memory: 79.18 GB
+
+⚠ Chỉ có 1 GPU. Có thể train nhưng sẽ chậm hơn.
+  Cân nhắc giảm batch_size nếu gặp OOM error
+Số GPU khả dụng: 1
+✓ Sử dụng 1 GPU, batch_size=256, gradient_accumulation_steps=2
+
+================================================================================
+TRAINING COMMAND (Updated for PyTorch 2.x):
+================================================================================
+torchrun --nproc_per_node=1 --standalone main_task_caption.py --do_train --stage_two --task_type caption --datatype msrvtt --num_thread_reader=4 --epochs=15 --batch_size=256 --n_display=50 --train_csv data/msrvtt/MSRVTT_train.9k.csv --val_csv data/msrvtt/MSRVTT_JSFUSION_test.csv --data_path data/msrvtt/MSRVTT_data.json --features_path /workspace/project/datasets/phihungcrr1701/msrvtt-clip-vitl14-features/versions/1/msrvtt_clip_vitl14_features.pickle --output_dir ckpts/ckpt_msrvtt_caption --bert_model bert-base-uncased --do_lower_case --lr 3e-5 --max_words 48 --max_frames 48 --batch_size_val 256 --visual_num_hidden_layers 6 --freeze_vit --init_model /workspace/project/datasets/trnphmngcminh/checkpoint-qformer-t5-model/versions/2/pytorch_model.bin.best.0 --gradient_accumulation_steps=2 --video_dim 768 --qformer_vision_width 1408 --qformer_checkpoint Salesforce/blip2-opt-6.7b-coco --lora --lr_qformer 2e-5 --lr_t5_decoder 5e-6 
+
+================================================================================
+
+✓ Command đã được lưu vào: train_msrvtt_caption.sh
+
+📝 LƯU Ý: Đã chuyển từ 'torch.distributed.launch' sang 'torchrun'
+   để tương thích với PyTorch 2.x trên Kaggle
+✓ Output directory created!
+04/12/2026 18:28:05 - INFO -   Effective parameters:
+04/12/2026 18:28:05 - INFO -     <<< batch_size: 128
+04/12/2026 18:28:05 - INFO -     <<< batch_size_val: 256
+04/12/2026 18:28:05 - INFO -     <<< beam_size: 5
+04/12/2026 18:28:05 - INFO -     <<< bert_model: bert-base-uncased
+04/12/2026 18:28:05 - INFO -     <<< cache_dir: 
+04/12/2026 18:28:05 - INFO -     <<< coef_lr: 0.1
+04/12/2026 18:28:05 - INFO -     <<< cross_model: cross-base
+04/12/2026 18:28:05 - INFO -     <<< cross_num_hidden_layers: 2
+04/12/2026 18:28:05 - INFO -     <<< data_path: data/msrvtt/MSRVTT_data.json
+04/12/2026 18:28:05 - INFO -     <<< datatype: msrvtt
+04/12/2026 18:28:05 - INFO -     <<< decoder_model: decoder-base
+04/12/2026 18:28:05 - INFO -     <<< decoder_num_hidden_layers: 3
+04/12/2026 18:28:05 - INFO -     <<< do_eval: False
+04/12/2026 18:28:05 - INFO -     <<< do_lower_case: True
+04/12/2026 18:28:05 - INFO -     <<< do_pretrain: False
+04/12/2026 18:28:05 - INFO -     <<< do_train: True
+04/12/2026 18:28:05 - INFO -     <<< epochs: 15
+04/12/2026 18:28:05 - INFO -     <<< feature_framerate: 1
+04/12/2026 18:28:05 - INFO -     <<< features_path: /workspace/project/datasets/phihungcrr1701/msrvtt-clip-vitl14-features/versions/1/msrvtt_clip_vitl14_features.pickle
+04/12/2026 18:28:05 - INFO -     <<< fp16: False
+04/12/2026 18:28:05 - INFO -     <<< fp16_opt_level: O1
+04/12/2026 18:28:05 - INFO -     <<< freeze_vit: True
+04/12/2026 18:28:05 - INFO -     <<< gradient_accumulation_steps: 2
+04/12/2026 18:28:05 - INFO -     <<< hard_negative_rate: 0.5
+04/12/2026 18:28:05 - INFO -     <<< init_model: /workspace/project/datasets/trnphmngcminh/checkpoint-qformer-t5-model/versions/2/pytorch_model.bin.best.0
+04/12/2026 18:28:05 - INFO -     <<< local_rank: 0
+04/12/2026 18:28:05 - INFO -     <<< lora: True
+04/12/2026 18:28:05 - INFO -     <<< lora_alpha: 32
+04/12/2026 18:28:05 - INFO -     <<< lora_dropout: 0.05
+04/12/2026 18:28:05 - INFO -     <<< lora_r: 16
+04/12/2026 18:28:05 - INFO -     <<< lr: 3e-05
+04/12/2026 18:28:05 - INFO -     <<< lr_decay: 0.9
+04/12/2026 18:28:05 - INFO -     <<< lr_lora: 5e-06
+04/12/2026 18:28:05 - INFO -     <<< lr_qformer: 2e-05
+04/12/2026 18:28:05 - INFO -     <<< margin: 0.1
+04/12/2026 18:28:05 - INFO -     <<< max_frames: 48
+04/12/2026 18:28:05 - INFO -     <<< max_txt_len: 32
+04/12/2026 18:28:05 - INFO -     <<< max_words: 48
+04/12/2026 18:28:05 - INFO -     <<< min_time: 5.0
+04/12/2026 18:28:05 - INFO -     <<< n_display: 50
+04/12/2026 18:28:05 - INFO -     <<< n_gpu: 1
+04/12/2026 18:28:05 - INFO -     <<< n_pair: 1
+04/12/2026 18:28:05 - INFO -     <<< negative_weighting: 1
+04/12/2026 18:28:05 - INFO -     <<< num_query_token: 32
+04/12/2026 18:28:05 - INFO -     <<< num_thread_reader: 4
+04/12/2026 18:28:05 - INFO -     <<< output_dir: ckpts/ckpt_msrvtt_caption
+04/12/2026 18:28:05 - INFO -     <<< qformer_checkpoint: Salesforce/blip2-opt-6.7b-coco
+04/12/2026 18:28:05 - INFO -     <<< qformer_checkpoint_file: 
+04/12/2026 18:28:05 - INFO -     <<< qformer_checkpoint_local_files_only: False
+04/12/2026 18:28:05 - INFO -     <<< qformer_vision_width: 1408
+04/12/2026 18:28:05 - INFO -     <<< sampled_use_mil: False
+04/12/2026 18:28:05 - INFO -     <<< scst: False
+04/12/2026 18:28:05 - INFO -     <<< seed: 42
+04/12/2026 18:28:05 - INFO -     <<< stage_two: True
+04/12/2026 18:28:05 - INFO -     <<< t5_model: google/flan-t5-xl
+04/12/2026 18:28:05 - INFO -     <<< task_type: caption
+04/12/2026 18:28:05 - INFO -     <<< text_num_hidden_layers: 12
+04/12/2026 18:28:05 - INFO -     <<< train_csv: data/msrvtt/MSRVTT_train.9k.csv
+04/12/2026 18:28:05 - INFO -     <<< use_mil: False
+04/12/2026 18:28:05 - INFO -     <<< val_csv: data/msrvtt/MSRVTT_JSFUSION_test.csv
+04/12/2026 18:28:05 - INFO -     <<< video_dim: 768
+04/12/2026 18:28:05 - INFO -     <<< visual_model: visual-base
+04/12/2026 18:28:05 - INFO -     <<< visual_num_hidden_layers: 6
+04/12/2026 18:28:05 - INFO -     <<< warmup_proportion: 0.1
+04/12/2026 18:28:05 - INFO -     <<< world_size: 1
+04/12/2026 18:28:05 - INFO -   device: cuda:0 n_gpu: 1
+/workspace/project/video-captioning/modules/bert-base-uncased/vocab.txt
+04/12/2026 18:28:05 - INFO -   loading vocabulary file /workspace/project/video-captioning/modules/bert-base-uncased/vocab.txt
+04/12/2026 18:28:09 - INFO -   loading archive file /workspace/project/video-captioning/modules/bert-base-uncased
+04/12/2026 18:28:09 - INFO -   Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+04/12/2026 18:28:09 - INFO -   loading archive file /workspace/project/video-captioning/modules/visual-base
+04/12/2026 18:28:09 - INFO -   Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+04/12/2026 18:28:09 - INFO -   Weight doesn't exsits. /workspace/project/video-captioning/modules/visual-base/visual_pytorch_model.bin
+04/12/2026 18:28:09 - WARNING -   Set visual_config.vocab_size: 768.
+04/12/2026 18:28:09 - INFO -   loading archive file /workspace/project/video-captioning/modules/cross-base
+04/12/2026 18:28:09 - INFO -   Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+04/12/2026 18:28:09 - INFO -   Weight doesn't exsits. /workspace/project/video-captioning/modules/cross-base/cross_pytorch_model.bin
+04/12/2026 18:28:09 - INFO -   loading archive file /workspace/project/video-captioning/modules/decoder-base
+04/12/2026 18:28:09 - INFO -   Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+04/12/2026 18:28:09 - INFO -   Weight doesn't exsits. /workspace/project/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+04/12/2026 18:28:09 - WARNING -   Stage-One:False, Stage-Two:True
+04/12/2026 18:28:09 - WARNING -   Set bert_config.num_hidden_layers: 12.
+04/12/2026 18:28:10 - WARNING -   Set visual_config.num_hidden_layers: 6.
+04/12/2026 18:28:10 - WARNING -   Freeze vision encoder.
+04/12/2026 18:28:10 - WARNING -   Set cross_config.num_hidden_layers: 2.
+04/12/2026 18:28:10 - WARNING -   Add QFormer visual projection: 768 -> 1408.
+config.json: 100%|█████████████████████████████| 570/570 [00:00<00:00, 4.60MB/s]
+model.safetensors: 100%|██████████████████████| 440M/440M [00:02<00:00, 199MB/s]
+BertLMHeadModel has generative capabilities, as `prepare_inputs_for_generation` is explicitly defined. However, it doesn't directly inherit from `GenerationMixin`. From 👉v4.50👈 onwards, `PreTrainedModel` will NOT inherit from `GenerationMixin`, and this model will lose the ability to call `generate` and other related functions.
+  - If you're using `trust_remote_code=True`, you can get rid of this warning by loading the model with an auto class. See https://huggingface.co/docs/transformers/en/model_doc/auto#auto-classes
+  - If you are the owner of the model architecture code, please modify your model class such that it inherits from `GenerationMixin` (after `PreTrainedModel`, otherwise you'll get an exception).
+  - If you are not the owner of the model architecture class, please contact the model code owner to update it.
+Some weights of BertLMHeadModel were not initialized from the model checkpoint at bert-base-uncased and are newly initialized: ['bert.encoder.layer.0.crossattention.output.LayerNorm.bias', 'bert.encoder.layer.0.crossattention.output.LayerNorm.weight', 'bert.encoder.layer.0.crossattention.output.dense.bias', 'bert.encoder.layer.0.crossattention.output.dense.weight', 'bert.encoder.layer.0.crossattention.self.key.bias', 'bert.encoder.layer.0.crossattention.self.key.weight', 'bert.encoder.layer.0.crossattention.self.query.bias', 'bert.encoder.layer.0.crossattention.self.query.weight', 'bert.encoder.layer.0.crossattention.self.value.bias', 'bert.encoder.layer.0.crossattention.self.value.weight', 'bert.encoder.layer.0.intermediate_query.dense.bias', 'bert.encoder.layer.0.intermediate_query.dense.weight', 'bert.encoder.layer.0.output_query.LayerNorm.bias', 'bert.encoder.layer.0.output_query.LayerNorm.weight', 'bert.encoder.layer.0.output_query.dense.bias', 'bert.encoder.layer.0.output_query.dense.weight', 'bert.encoder.layer.1.intermediate_query.dense.bias', 'bert.encoder.layer.1.intermediate_query.dense.weight', 'bert.encoder.layer.1.output_query.LayerNorm.bias', 'bert.encoder.layer.1.output_query.LayerNorm.weight', 'bert.encoder.layer.1.output_query.dense.bias', 'bert.encoder.layer.1.output_query.dense.weight', 'bert.encoder.layer.10.crossattention.output.LayerNorm.bias', 'bert.encoder.layer.10.crossattention.output.LayerNorm.weight', 'bert.encoder.layer.10.crossattention.output.dense.bias', 'bert.encoder.layer.10.crossattention.output.dense.weight', 'bert.encoder.layer.10.crossattention.self.key.bias', 'bert.encoder.layer.10.crossattention.self.key.weight', 'bert.encoder.layer.10.crossattention.self.query.bias', 'bert.encoder.layer.10.crossattention.self.query.weight', 'bert.encoder.layer.10.crossattention.self.value.bias', 'bert.encoder.layer.10.crossattention.self.value.weight', 'bert.encoder.layer.10.intermediate_query.dense.bias', 'bert.encoder.layer.10.intermediate_query.dense.weight', 'bert.encoder.layer.10.output_query.LayerNorm.bias', 'bert.encoder.layer.10.output_query.LayerNorm.weight', 'bert.encoder.layer.10.output_query.dense.bias', 'bert.encoder.layer.10.output_query.dense.weight', 'bert.encoder.layer.11.intermediate_query.dense.bias', 'bert.encoder.layer.11.intermediate_query.dense.weight', 'bert.encoder.layer.11.output_query.LayerNorm.bias', 'bert.encoder.layer.11.output_query.LayerNorm.weight', 'bert.encoder.layer.11.output_query.dense.bias', 'bert.encoder.layer.11.output_query.dense.weight', 'bert.encoder.layer.2.crossattention.output.LayerNorm.bias', 'bert.encoder.layer.2.crossattention.output.LayerNorm.weight', 'bert.encoder.layer.2.crossattention.output.dense.bias', 'bert.encoder.layer.2.crossattention.output.dense.weight', 'bert.encoder.layer.2.crossattention.self.key.bias', 'bert.encoder.layer.2.crossattention.self.key.weight', 'bert.encoder.layer.2.crossattention.self.query.bias', 'bert.encoder.layer.2.crossattention.self.query.weight', 'bert.encoder.layer.2.crossattention.self.value.bias', 'bert.encoder.layer.2.crossattention.self.value.weight', 'bert.encoder.layer.2.intermediate_query.dense.bias', 'bert.encoder.layer.2.intermediate_query.dense.weight', 'bert.encoder.layer.2.output_query.LayerNorm.bias', 'bert.encoder.layer.2.output_query.LayerNorm.weight', 'bert.encoder.layer.2.output_query.dense.bias', 'bert.encoder.layer.2.output_query.dense.weight', 'bert.encoder.layer.3.intermediate_query.dense.bias', 'bert.encoder.layer.3.intermediate_query.dense.weight', 'bert.encoder.layer.3.output_query.LayerNorm.bias', 'bert.encoder.layer.3.output_query.LayerNorm.weight', 'bert.encoder.layer.3.output_query.dense.bias', 'bert.encoder.layer.3.output_query.dense.weight', 'bert.encoder.layer.4.crossattention.output.LayerNorm.bias', 'bert.encoder.layer.4.crossattention.output.LayerNorm.weight', 'bert.encoder.layer.4.crossattention.output.dense.bias', 'bert.encoder.layer.4.crossattention.output.dense.weight', 'bert.encoder.layer.4.crossattention.self.key.bias', 'bert.encoder.layer.4.crossattention.self.key.weight', 'bert.encoder.layer.4.crossattention.self.query.bias', 'bert.encoder.layer.4.crossattention.self.query.weight', 'bert.encoder.layer.4.crossattention.self.value.bias', 'bert.encoder.layer.4.crossattention.self.value.weight', 'bert.encoder.layer.4.intermediate_query.dense.bias', 'bert.encoder.layer.4.intermediate_query.dense.weight', 'bert.encoder.layer.4.output_query.LayerNorm.bias', 'bert.encoder.layer.4.output_query.LayerNorm.weight', 'bert.encoder.layer.4.output_query.dense.bias', 'bert.encoder.layer.4.output_query.dense.weight', 'bert.encoder.layer.5.intermediate_query.dense.bias', 'bert.encoder.layer.5.intermediate_query.dense.weight', 'bert.encoder.layer.5.output_query.LayerNorm.bias', 'bert.encoder.layer.5.output_query.LayerNorm.weight', 'bert.encoder.layer.5.output_query.dense.bias', 'bert.encoder.layer.5.output_query.dense.weight', 'bert.encoder.layer.6.crossattention.output.LayerNorm.bias', 'bert.encoder.layer.6.crossattention.output.LayerNorm.weight', 'bert.encoder.layer.6.crossattention.output.dense.bias', 'bert.encoder.layer.6.crossattention.output.dense.weight', 'bert.encoder.layer.6.crossattention.self.key.bias', 'bert.encoder.layer.6.crossattention.self.key.weight', 'bert.encoder.layer.6.crossattention.self.query.bias', 'bert.encoder.layer.6.crossattention.self.query.weight', 'bert.encoder.layer.6.crossattention.self.value.bias', 'bert.encoder.layer.6.crossattention.self.value.weight', 'bert.encoder.layer.6.intermediate_query.dense.bias', 'bert.encoder.layer.6.intermediate_query.dense.weight', 'bert.encoder.layer.6.output_query.LayerNorm.bias', 'bert.encoder.layer.6.output_query.LayerNorm.weight', 'bert.encoder.layer.6.output_query.dense.bias', 'bert.encoder.layer.6.output_query.dense.weight', 'bert.encoder.layer.7.intermediate_query.dense.bias', 'bert.encoder.layer.7.intermediate_query.dense.weight', 'bert.encoder.layer.7.output_query.LayerNorm.bias', 'bert.encoder.layer.7.output_query.LayerNorm.weight', 'bert.encoder.layer.7.output_query.dense.bias', 'bert.encoder.layer.7.output_query.dense.weight', 'bert.encoder.layer.8.crossattention.output.LayerNorm.bias', 'bert.encoder.layer.8.crossattention.output.LayerNorm.weight', 'bert.encoder.layer.8.crossattention.output.dense.bias', 'bert.encoder.layer.8.crossattention.output.dense.weight', 'bert.encoder.layer.8.crossattention.self.key.bias', 'bert.encoder.layer.8.crossattention.self.key.weight', 'bert.encoder.layer.8.crossattention.self.query.bias', 'bert.encoder.layer.8.crossattention.self.query.weight', 'bert.encoder.layer.8.crossattention.self.value.bias', 'bert.encoder.layer.8.crossattention.self.value.weight', 'bert.encoder.layer.8.intermediate_query.dense.bias', 'bert.encoder.layer.8.intermediate_query.dense.weight', 'bert.encoder.layer.8.output_query.LayerNorm.bias', 'bert.encoder.layer.8.output_query.LayerNorm.weight', 'bert.encoder.layer.8.output_query.dense.bias', 'bert.encoder.layer.8.output_query.dense.weight', 'bert.encoder.layer.9.intermediate_query.dense.bias', 'bert.encoder.layer.9.intermediate_query.dense.weight', 'bert.encoder.layer.9.output_query.LayerNorm.bias', 'bert.encoder.layer.9.output_query.LayerNorm.weight', 'bert.encoder.layer.9.output_query.dense.bias', 'bert.encoder.layer.9.output_query.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+BertLMHeadModel has generative capabilities, as `prepare_inputs_for_generation` is explicitly defined. However, it doesn't directly inherit from `GenerationMixin`. From 👉v4.50👈 onwards, `PreTrainedModel` will NOT inherit from `GenerationMixin`, and this model will lose the ability to call `generate` and other related functions.
+  - If you're using `trust_remote_code=True`, you can get rid of this warning by loading the model with an auto class. See https://huggingface.co/docs/transformers/en/model_doc/auto#auto-classes
+  - If you are the owner of the model architecture code, please modify your model class such that it inherits from `GenerationMixin` (after `PreTrainedModel`, otherwise you'll get an exception).
+  - If you are not the owner of the model architecture class, please contact the model code owner to update it.
+BertLMHeadModel has generative capabilities, as `prepare_inputs_for_generation` is explicitly defined. However, it doesn't directly inherit from `GenerationMixin`. From 👉v4.50👈 onwards, `PreTrainedModel` will NOT inherit from `GenerationMixin`, and this model will lose the ability to call `generate` and other related functions.
+  - If you're using `trust_remote_code=True`, you can get rid of this warning by loading the model with an auto class. See https://huggingface.co/docs/transformers/en/model_doc/auto#auto-classes
+  - If you are the owner of the model architecture code, please modify your model class such that it inherits from `GenerationMixin` (after `PreTrainedModel`, otherwise you'll get an exception).
+  - If you are not the owner of the model architecture class, please contact the model code owner to update it.
+model.safetensors.index.json: 122kB [00:00, 223MB/s]
+04/12/2026 18:28:14 - INFO -   QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+model-00001-of-00004.safetensors: 100%|█████| 9.80G/9.80G [00:13<00:00, 731MB/s]
+04/12/2026 18:28:27 - INFO -   Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+tokenizer_config.json: 2.54kB [00:00, 16.4MB/s]
+spiece.model: 100%|██████████████████████████| 792k/792k [00:00<00:00, 1.94MB/s]
+tokenizer.json: 2.42MB [00:00, 186MB/s]
+special_tokens_map.json: 2.20kB [00:00, 18.1MB/s]
+config.json: 1.44kB [00:00, 11.6MB/s]
+model.safetensors.index.json: 53.0kB [00:00, 208MB/s]
+Fetching 2 files:   0%|                                   | 0/2 [00:00<?, ?it/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:00<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:00<?, ?B/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:00<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:00<?, ?B/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:00<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:00<?, ?B/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:00<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:00<?, ?B/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:00<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:00<?, ?B/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:01<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:01<?, ?B/s]
+model-00002-of-00002.safetensors:   0%|             | 0.00/1.95G [00:01<?, ?B/s]
+
+model-00001-of-00002.safetensors:   0%|             | 0.00/9.45G [00:01<?, ?B/s]
+model-00002-of-00002.safetensors:  13%|▋    | 256M/1.95G [00:01<00:01, 1.28GB/s]
+
+model-00001-of-00002.safetensors:   1%|      | 134M/9.45G [00:01<00:13, 670MB/s]
+model-00002-of-00002.safetensors:  24%|█▏   | 469M/1.95G [00:01<00:01, 1.15GB/s]
+model-00002-of-00002.safetensors:  34%|██    | 670M/1.95G [00:02<00:01, 746MB/s]
+
+model-00001-of-00002.safetensors:   4%|▏     | 337M/9.45G [00:02<00:22, 401MB/s]
+model-00002-of-00002.safetensors:  39%|██▎   | 768M/1.95G [00:02<00:01, 666MB/s]
+
+model-00001-of-00002.safetensors:   6%|▎     | 539M/9.45G [00:02<00:15, 571MB/s]
+model-00002-of-00002.safetensors:  55%|██▊  | 1.07G/1.95G [00:02<00:00, 929MB/s]
+model-00002-of-00002.safetensors:  69%|███▍ | 1.34G/1.95G [00:02<00:00, 808MB/s]
+
+model-00001-of-00002.safetensors:  11%|▌    | 1.08G/9.45G [00:03<00:15, 549MB/s]
+
+model-00001-of-00002.safetensors:  15%|▋    | 1.41G/9.45G [00:03<00:11, 730MB/s]
+model-00002-of-00002.safetensors: 100%|█████| 1.95G/1.95G [00:04<00:00, 463MB/s]
+
+
+model-00001-of-00002.safetensors:  24%|█▏   | 2.22G/9.45G [00:04<00:08, 864MB/s]
+
+model-00001-of-00002.safetensors:  29%|█▍   | 2.76G/9.45G [00:04<00:06, 986MB/s]
+
+model-00001-of-00002.safetensors:  34%|█▍  | 3.26G/9.45G [00:05<00:05, 1.05GB/s]
+
+model-00001-of-00002.safetensors:  38%|█▌  | 3.57G/9.45G [00:05<00:05, 1.13GB/s]
+
+model-00001-of-00002.safetensors:  42%|█▋  | 3.97G/9.45G [00:05<00:04, 1.30GB/s]
+
+model-00001-of-00002.safetensors:  54%|██▏ | 5.09G/9.45G [00:06<00:03, 1.35GB/s]
+
+model-00001-of-00002.safetensors:  62%|██▍ | 5.90G/9.45G [00:06<00:02, 1.53GB/s]
+
+model-00001-of-00002.safetensors:  79%|███▏| 7.44G/9.45G [00:07<00:01, 1.40GB/s]
+
+model-00001-of-00002.safetensors:  84%|███▍| 7.98G/9.45G [00:08<00:01, 1.39GB/s]
+
+model-00001-of-00002.safetensors:  90%|███▌| 8.51G/9.45G [00:08<00:00, 1.55GB/s]
+
+model-00001-of-00002.safetensors:  94%|███▋| 8.85G/9.45G [00:08<00:00, 1.57GB/s]
+
+model-00001-of-00002.safetensors:  97%|███▉| 9.18G/9.45G [00:09<00:00, 1.17GB/s]
+
+model-00001-of-00002.safetensors: 100%|█████| 9.45G/9.45G [00:11<00:00, 858MB/s]
+Fetching 2 files: 100%|███████████████████████████| 2/2 [00:11<00:00,  5.60s/it]
+Loading checkpoint shards: 100%|██████████████████| 2/2 [00:00<00:00, 45.42it/s]
+generation_config.json: 100%|██████████████████| 147/147 [00:00<00:00, 1.82MB/s]
+trainable params: 9,437,184 || all params: 2,859,194,368 || trainable%: 0.3301
+04/12/2026 18:28:43 - WARNING -   Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj. Skipped 42 other tensors.
+04/12/2026 18:28:44 - INFO -   --------------------
+04/12/2026 18:28:44 - INFO -   Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   t5_model.base_model.model.shared.weight
+   t5_model.base_model.model.encoder.embed_tokens.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.SelfAttention.relative_attention_bias.weight
+   t5_model.base_model.model.encoder.block.0.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.0.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.0.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.0.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.0.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.1.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.1.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.1.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.1.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.1.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.2.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.2.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.2.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.2.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.2.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.3.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.3.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.3.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.3.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.3.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.4.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.4.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.4.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.4.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.4.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.5.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.5.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.5.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.5.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.5.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.6.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.6.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.6.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.6.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.6.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.7.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.7.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.7.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.7.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.7.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.8.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.8.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.8.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.8.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.8.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.9.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.9.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.9.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.9.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.9.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.10.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.10.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.10.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.10.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.10.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.11.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.11.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.11.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.11.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.11.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.12.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.12.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.12.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.12.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.12.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.13.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.13.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.13.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.13.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.13.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.14.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.14.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.14.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.14.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.14.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.15.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.15.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.15.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.15.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.15.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.16.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.16.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.16.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.16.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.16.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.17.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.17.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.17.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.17.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.17.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.18.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.18.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.18.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.18.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.18.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.19.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.19.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.19.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.19.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.19.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.20.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.20.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.20.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.20.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.20.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.21.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.21.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.21.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.21.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.21.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.22.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.22.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.22.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.22.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.22.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.encoder.block.23.layer.0.layer_norm.weight
+   t5_model.base_model.model.encoder.block.23.layer.1.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.encoder.block.23.layer.1.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.encoder.block.23.layer.1.DenseReluDense.wo.weight
+   t5_model.base_model.model.encoder.block.23.layer.1.layer_norm.weight
+   t5_model.base_model.model.encoder.final_layer_norm.weight
+   t5_model.base_model.model.decoder.embed_tokens.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.SelfAttention.relative_attention_bias.weight
+   t5_model.base_model.model.decoder.block.0.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.0.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.0.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.0.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.0.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.0.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.1.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.1.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.1.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.1.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.1.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.1.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.2.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.2.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.2.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.2.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.2.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.2.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.3.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.3.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.3.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.3.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.3.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.3.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.4.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.4.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.4.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.4.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.4.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.4.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.5.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.5.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.5.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.5.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.5.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.5.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.6.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.6.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.6.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.6.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.6.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.6.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.7.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.7.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.7.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.7.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.7.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.7.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.8.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.8.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.8.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.8.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.8.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.8.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.9.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.9.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.9.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.9.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.9.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.9.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.10.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.10.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.10.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.10.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.10.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.10.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.11.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.11.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.11.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.11.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.11.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.11.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.12.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.12.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.12.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.12.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.12.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.12.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.13.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.13.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.13.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.13.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.13.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.13.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.14.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.14.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.14.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.14.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.14.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.14.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.15.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.15.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.15.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.15.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.15.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.15.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.16.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.16.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.16.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.16.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.16.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.16.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.17.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.17.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.17.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.17.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.17.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.17.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.18.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.18.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.18.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.18.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.18.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.18.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.19.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.19.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.19.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.19.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.19.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.19.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.20.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.20.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.20.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.20.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.20.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.20.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.21.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.21.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.21.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.21.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.21.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.21.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.22.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.22.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.22.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.22.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.22.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.22.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.k.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.SelfAttention.o.weight
+   t5_model.base_model.model.decoder.block.23.layer.0.layer_norm.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.q.base_layer.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.q.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.q.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.k.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.v.base_layer.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.v.lora_A.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.v.lora_B.default.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.EncDecAttention.o.weight
+   t5_model.base_model.model.decoder.block.23.layer.1.layer_norm.weight
+   t5_model.base_model.model.decoder.block.23.layer.2.DenseReluDense.wi_0.weight
+   t5_model.base_model.model.decoder.block.23.layer.2.DenseReluDense.wi_1.weight
+   t5_model.base_model.model.decoder.block.23.layer.2.DenseReluDense.wo.weight
+   t5_model.base_model.model.decoder.block.23.layer.2.layer_norm.weight
+   t5_model.base_model.model.decoder.final_layer_norm.weight
+   t5_model.base_model.model.lm_head.weight
+   similarity_dense.weight
+   similarity_dense.bias
+   normalize_video.visual_norm2d.weight
+   normalize_video.visual_norm2d.bias
+04/12/2026 18:28:44 - INFO -   Weights from pretrained model not used in UniVL: 
+   t5_model.shared.weight
+   t5_model.encoder.embed_tokens.weight
+   t5_model.encoder.block.0.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.0.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.0.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.0.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.0.layer.0.SelfAttention.relative_attention_bias.weight
+   t5_model.encoder.block.0.layer.0.layer_norm.weight
+   t5_model.encoder.block.0.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.0.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.0.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.0.layer.1.layer_norm.weight
+   t5_model.encoder.block.1.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.1.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.1.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.1.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.1.layer.0.layer_norm.weight
+   t5_model.encoder.block.1.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.1.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.1.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.1.layer.1.layer_norm.weight
+   t5_model.encoder.block.2.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.2.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.2.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.2.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.2.layer.0.layer_norm.weight
+   t5_model.encoder.block.2.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.2.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.2.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.2.layer.1.layer_norm.weight
+   t5_model.encoder.block.3.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.3.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.3.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.3.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.3.layer.0.layer_norm.weight
+   t5_model.encoder.block.3.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.3.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.3.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.3.layer.1.layer_norm.weight
+   t5_model.encoder.block.4.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.4.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.4.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.4.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.4.layer.0.layer_norm.weight
+   t5_model.encoder.block.4.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.4.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.4.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.4.layer.1.layer_norm.weight
+   t5_model.encoder.block.5.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.5.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.5.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.5.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.5.layer.0.layer_norm.weight
+   t5_model.encoder.block.5.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.5.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.5.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.5.layer.1.layer_norm.weight
+   t5_model.encoder.block.6.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.6.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.6.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.6.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.6.layer.0.layer_norm.weight
+   t5_model.encoder.block.6.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.6.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.6.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.6.layer.1.layer_norm.weight
+   t5_model.encoder.block.7.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.7.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.7.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.7.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.7.layer.0.layer_norm.weight
+   t5_model.encoder.block.7.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.7.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.7.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.7.layer.1.layer_norm.weight
+   t5_model.encoder.block.8.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.8.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.8.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.8.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.8.layer.0.layer_norm.weight
+   t5_model.encoder.block.8.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.8.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.8.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.8.layer.1.layer_norm.weight
+   t5_model.encoder.block.9.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.9.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.9.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.9.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.9.layer.0.layer_norm.weight
+   t5_model.encoder.block.9.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.9.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.9.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.9.layer.1.layer_norm.weight
+   t5_model.encoder.block.10.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.10.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.10.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.10.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.10.layer.0.layer_norm.weight
+   t5_model.encoder.block.10.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.10.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.10.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.10.layer.1.layer_norm.weight
+   t5_model.encoder.block.11.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.11.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.11.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.11.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.11.layer.0.layer_norm.weight
+   t5_model.encoder.block.11.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.11.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.11.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.11.layer.1.layer_norm.weight
+   t5_model.encoder.block.12.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.12.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.12.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.12.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.12.layer.0.layer_norm.weight
+   t5_model.encoder.block.12.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.12.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.12.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.12.layer.1.layer_norm.weight
+   t5_model.encoder.block.13.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.13.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.13.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.13.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.13.layer.0.layer_norm.weight
+   t5_model.encoder.block.13.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.13.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.13.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.13.layer.1.layer_norm.weight
+   t5_model.encoder.block.14.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.14.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.14.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.14.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.14.layer.0.layer_norm.weight
+   t5_model.encoder.block.14.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.14.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.14.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.14.layer.1.layer_norm.weight
+   t5_model.encoder.block.15.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.15.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.15.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.15.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.15.layer.0.layer_norm.weight
+   t5_model.encoder.block.15.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.15.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.15.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.15.layer.1.layer_norm.weight
+   t5_model.encoder.block.16.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.16.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.16.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.16.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.16.layer.0.layer_norm.weight
+   t5_model.encoder.block.16.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.16.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.16.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.16.layer.1.layer_norm.weight
+   t5_model.encoder.block.17.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.17.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.17.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.17.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.17.layer.0.layer_norm.weight
+   t5_model.encoder.block.17.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.17.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.17.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.17.layer.1.layer_norm.weight
+   t5_model.encoder.block.18.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.18.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.18.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.18.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.18.layer.0.layer_norm.weight
+   t5_model.encoder.block.18.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.18.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.18.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.18.layer.1.layer_norm.weight
+   t5_model.encoder.block.19.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.19.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.19.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.19.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.19.layer.0.layer_norm.weight
+   t5_model.encoder.block.19.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.19.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.19.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.19.layer.1.layer_norm.weight
+   t5_model.encoder.block.20.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.20.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.20.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.20.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.20.layer.0.layer_norm.weight
+   t5_model.encoder.block.20.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.20.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.20.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.20.layer.1.layer_norm.weight
+   t5_model.encoder.block.21.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.21.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.21.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.21.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.21.layer.0.layer_norm.weight
+   t5_model.encoder.block.21.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.21.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.21.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.21.layer.1.layer_norm.weight
+   t5_model.encoder.block.22.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.22.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.22.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.22.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.22.layer.0.layer_norm.weight
+   t5_model.encoder.block.22.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.22.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.22.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.22.layer.1.layer_norm.weight
+   t5_model.encoder.block.23.layer.0.SelfAttention.q.weight
+   t5_model.encoder.block.23.layer.0.SelfAttention.k.weight
+   t5_model.encoder.block.23.layer.0.SelfAttention.v.weight
+   t5_model.encoder.block.23.layer.0.SelfAttention.o.weight
+   t5_model.encoder.block.23.layer.0.layer_norm.weight
+   t5_model.encoder.block.23.layer.1.DenseReluDense.wi_0.weight
+   t5_model.encoder.block.23.layer.1.DenseReluDense.wi_1.weight
+   t5_model.encoder.block.23.layer.1.DenseReluDense.wo.weight
+   t5_model.encoder.block.23.layer.1.layer_norm.weight
+   t5_model.encoder.final_layer_norm.weight
+   t5_model.decoder.embed_tokens.weight
+   t5_model.decoder.block.0.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.0.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.0.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.0.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.0.layer.0.SelfAttention.relative_attention_bias.weight
+   t5_model.decoder.block.0.layer.0.layer_norm.weight
+   t5_model.decoder.block.0.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.0.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.0.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.0.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.0.layer.1.layer_norm.weight
+   t5_model.decoder.block.0.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.0.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.0.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.0.layer.2.layer_norm.weight
+   t5_model.decoder.block.1.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.1.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.1.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.1.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.1.layer.0.layer_norm.weight
+   t5_model.decoder.block.1.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.1.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.1.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.1.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.1.layer.1.layer_norm.weight
+   t5_model.decoder.block.1.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.1.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.1.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.1.layer.2.layer_norm.weight
+   t5_model.decoder.block.2.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.2.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.2.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.2.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.2.layer.0.layer_norm.weight
+   t5_model.decoder.block.2.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.2.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.2.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.2.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.2.layer.1.layer_norm.weight
+   t5_model.decoder.block.2.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.2.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.2.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.2.layer.2.layer_norm.weight
+   t5_model.decoder.block.3.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.3.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.3.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.3.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.3.layer.0.layer_norm.weight
+   t5_model.decoder.block.3.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.3.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.3.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.3.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.3.layer.1.layer_norm.weight
+   t5_model.decoder.block.3.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.3.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.3.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.3.layer.2.layer_norm.weight
+   t5_model.decoder.block.4.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.4.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.4.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.4.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.4.layer.0.layer_norm.weight
+   t5_model.decoder.block.4.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.4.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.4.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.4.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.4.layer.1.layer_norm.weight
+   t5_model.decoder.block.4.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.4.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.4.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.4.layer.2.layer_norm.weight
+   t5_model.decoder.block.5.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.5.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.5.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.5.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.5.layer.0.layer_norm.weight
+   t5_model.decoder.block.5.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.5.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.5.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.5.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.5.layer.1.layer_norm.weight
+   t5_model.decoder.block.5.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.5.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.5.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.5.layer.2.layer_norm.weight
+   t5_model.decoder.block.6.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.6.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.6.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.6.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.6.layer.0.layer_norm.weight
+   t5_model.decoder.block.6.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.6.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.6.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.6.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.6.layer.1.layer_norm.weight
+   t5_model.decoder.block.6.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.6.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.6.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.6.layer.2.layer_norm.weight
+   t5_model.decoder.block.7.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.7.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.7.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.7.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.7.layer.0.layer_norm.weight
+   t5_model.decoder.block.7.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.7.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.7.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.7.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.7.layer.1.layer_norm.weight
+   t5_model.decoder.block.7.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.7.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.7.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.7.layer.2.layer_norm.weight
+   t5_model.decoder.block.8.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.8.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.8.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.8.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.8.layer.0.layer_norm.weight
+   t5_model.decoder.block.8.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.8.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.8.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.8.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.8.layer.1.layer_norm.weight
+   t5_model.decoder.block.8.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.8.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.8.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.8.layer.2.layer_norm.weight
+   t5_model.decoder.block.9.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.9.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.9.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.9.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.9.layer.0.layer_norm.weight
+   t5_model.decoder.block.9.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.9.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.9.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.9.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.9.layer.1.layer_norm.weight
+   t5_model.decoder.block.9.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.9.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.9.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.9.layer.2.layer_norm.weight
+   t5_model.decoder.block.10.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.10.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.10.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.10.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.10.layer.0.layer_norm.weight
+   t5_model.decoder.block.10.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.10.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.10.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.10.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.10.layer.1.layer_norm.weight
+   t5_model.decoder.block.10.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.10.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.10.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.10.layer.2.layer_norm.weight
+   t5_model.decoder.block.11.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.11.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.11.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.11.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.11.layer.0.layer_norm.weight
+   t5_model.decoder.block.11.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.11.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.11.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.11.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.11.layer.1.layer_norm.weight
+   t5_model.decoder.block.11.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.11.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.11.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.11.layer.2.layer_norm.weight
+   t5_model.decoder.block.12.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.12.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.12.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.12.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.12.layer.0.layer_norm.weight
+   t5_model.decoder.block.12.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.12.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.12.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.12.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.12.layer.1.layer_norm.weight
+   t5_model.decoder.block.12.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.12.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.12.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.12.layer.2.layer_norm.weight
+   t5_model.decoder.block.13.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.13.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.13.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.13.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.13.layer.0.layer_norm.weight
+   t5_model.decoder.block.13.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.13.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.13.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.13.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.13.layer.1.layer_norm.weight
+   t5_model.decoder.block.13.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.13.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.13.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.13.layer.2.layer_norm.weight
+   t5_model.decoder.block.14.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.14.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.14.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.14.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.14.layer.0.layer_norm.weight
+   t5_model.decoder.block.14.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.14.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.14.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.14.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.14.layer.1.layer_norm.weight
+   t5_model.decoder.block.14.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.14.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.14.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.14.layer.2.layer_norm.weight
+   t5_model.decoder.block.15.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.15.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.15.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.15.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.15.layer.0.layer_norm.weight
+   t5_model.decoder.block.15.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.15.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.15.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.15.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.15.layer.1.layer_norm.weight
+   t5_model.decoder.block.15.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.15.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.15.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.15.layer.2.layer_norm.weight
+   t5_model.decoder.block.16.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.16.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.16.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.16.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.16.layer.0.layer_norm.weight
+   t5_model.decoder.block.16.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.16.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.16.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.16.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.16.layer.1.layer_norm.weight
+   t5_model.decoder.block.16.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.16.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.16.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.16.layer.2.layer_norm.weight
+   t5_model.decoder.block.17.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.17.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.17.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.17.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.17.layer.0.layer_norm.weight
+   t5_model.decoder.block.17.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.17.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.17.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.17.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.17.layer.1.layer_norm.weight
+   t5_model.decoder.block.17.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.17.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.17.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.17.layer.2.layer_norm.weight
+   t5_model.decoder.block.18.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.18.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.18.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.18.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.18.layer.0.layer_norm.weight
+   t5_model.decoder.block.18.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.18.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.18.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.18.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.18.layer.1.layer_norm.weight
+   t5_model.decoder.block.18.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.18.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.18.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.18.layer.2.layer_norm.weight
+   t5_model.decoder.block.19.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.19.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.19.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.19.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.19.layer.0.layer_norm.weight
+   t5_model.decoder.block.19.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.19.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.19.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.19.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.19.layer.1.layer_norm.weight
+   t5_model.decoder.block.19.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.19.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.19.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.19.layer.2.layer_norm.weight
+   t5_model.decoder.block.20.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.20.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.20.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.20.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.20.layer.0.layer_norm.weight
+   t5_model.decoder.block.20.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.20.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.20.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.20.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.20.layer.1.layer_norm.weight
+   t5_model.decoder.block.20.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.20.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.20.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.20.layer.2.layer_norm.weight
+   t5_model.decoder.block.21.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.21.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.21.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.21.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.21.layer.0.layer_norm.weight
+   t5_model.decoder.block.21.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.21.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.21.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.21.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.21.layer.1.layer_norm.weight
+   t5_model.decoder.block.21.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.21.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.21.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.21.layer.2.layer_norm.weight
+   t5_model.decoder.block.22.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.22.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.22.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.22.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.22.layer.0.layer_norm.weight
+   t5_model.decoder.block.22.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.22.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.22.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.22.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.22.layer.1.layer_norm.weight
+   t5_model.decoder.block.22.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.22.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.22.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.22.layer.2.layer_norm.weight
+   t5_model.decoder.block.23.layer.0.SelfAttention.q.weight
+   t5_model.decoder.block.23.layer.0.SelfAttention.k.weight
+   t5_model.decoder.block.23.layer.0.SelfAttention.v.weight
+   t5_model.decoder.block.23.layer.0.SelfAttention.o.weight
+   t5_model.decoder.block.23.layer.0.layer_norm.weight
+   t5_model.decoder.block.23.layer.1.EncDecAttention.q.weight
+   t5_model.decoder.block.23.layer.1.EncDecAttention.k.weight
+   t5_model.decoder.block.23.layer.1.EncDecAttention.v.weight
+   t5_model.decoder.block.23.layer.1.EncDecAttention.o.weight
+   t5_model.decoder.block.23.layer.1.layer_norm.weight
+   t5_model.decoder.block.23.layer.2.DenseReluDense.wi_0.weight
+   t5_model.decoder.block.23.layer.2.DenseReluDense.wi_1.weight
+   t5_model.decoder.block.23.layer.2.DenseReluDense.wo.weight
+   t5_model.decoder.block.23.layer.2.layer_norm.weight
+   t5_model.decoder.final_layer_norm.weight
+   t5_model.lm_head.weight
+04/12/2026 18:28:45 - INFO -   Using pycocoevalcap for evaluation metrics
+04/12/2026 18:28:50 - INFO -   ***** Running test *****
+04/12/2026 18:28:50 - INFO -     Num examples = 2990
+04/12/2026 18:28:50 - INFO -     Batch size = 256
+04/12/2026 18:28:50 - INFO -     Num steps = 12
+04/12/2026 18:28:58 - INFO -   ***** Running training *****
+04/12/2026 18:28:58 - INFO -     Num examples = 130260
+04/12/2026 18:28:58 - INFO -     Batch size = 128
+04/12/2026 18:28:58 - INFO -     Num steps = 15270
+04/12/2026 18:29:39 - INFO -   Epoch: 1/15, Step: 100/1017, Lr: , Loss: 1.183934, Time/step: 0.414111
+04/12/2026 18:30:19 - INFO -   Epoch: 1/15, Step: 200/1017, Lr: , Loss: 1.211619, Time/step: 0.400888
+04/12/2026 18:31:00 - INFO -   Epoch: 1/15, Step: 300/1017, Lr: , Loss: 1.229522, Time/step: 0.403018
+04/12/2026 18:31:40 - INFO -   Epoch: 1/15, Step: 400/1017, Lr: , Loss: 1.191179, Time/step: 0.404797
+04/12/2026 18:32:20 - INFO -   Epoch: 1/15, Step: 500/1017, Lr: , Loss: 1.153637, Time/step: 0.399661
+04/12/2026 18:33:00 - INFO -   Epoch: 1/15, Step: 600/1017, Lr: , Loss: 1.145911, Time/step: 0.396582
+04/12/2026 18:33:39 - INFO -   Epoch: 1/15, Step: 700/1017, Lr: , Loss: 1.196947, Time/step: 0.398268
+04/12/2026 18:34:19 - INFO -   Epoch: 1/15, Step: 800/1017, Lr: , Loss: 1.223881, Time/step: 0.399057
+04/12/2026 18:35:00 - INFO -   Epoch: 1/15, Step: 900/1017, Lr: , Loss: 1.201048, Time/step: 0.402228
+04/12/2026 18:35:40 - INFO -   Epoch: 1/15, Step: 1000/1017, Lr: , Loss: 1.266498, Time/step: 0.399357
+04/12/2026 18:35:47 - INFO -   Epoch 1/15 Finished, Train Loss: 1.186568
+04/12/2026 18:35:53 - INFO -   Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+04/12/2026 18:36:30 - INFO -     Average Validation Loss: 2.4035
+PTBTokenizer tokenized 28773 tokens at 390968.59 tokens per second.
+PTBTokenizer tokenized 617049 tokens at 1089954.83 tokens per second.
+{'testlen': 25775, 'reflen': 25789, 'guess': [25775, 22785, 19795, 16805], 'correct': [21325, 12874, 6541, 2905]}
+ratio: 0.9994571328860755
+04/12/2026 18:36:47 - INFO -   >>>  BLEU_1: 0.8269, BLEU_2: 0.6833, BLEU_3: 0.5363, BLEU_4: 0.4040
+04/12/2026 18:36:47 - INFO -   >>>  METEOR: 0.2974, ROUGE_L: 0.6218, CIDEr: 0.5591
+04/12/2026 18:36:53 - INFO -   Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+04/12/2026 18:36:53 - INFO -   The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5591, BLEU_4: 0.4040
+04/12/2026 18:37:28 - INFO -   Epoch: 2/15, Step: 84/1017, Lr: , Loss: 1.082953, Time/step: 0.354803
+04/12/2026 18:38:08 - INFO -   Epoch: 2/15, Step: 184/1017, Lr: , Loss: 1.145425, Time/step: 0.398695
+04/12/2026 18:38:48 - INFO -   Epoch: 2/15, Step: 284/1017, Lr: , Loss: 1.213642, Time/step: 0.398219
+04/12/2026 18:39:28 - INFO -   Epoch: 2/15, Step: 384/1017, Lr: , Loss: 1.190010, Time/step: 0.402614
+04/12/2026 18:40:09 - INFO -   Epoch: 2/15, Step: 484/1017, Lr: , Loss: 1.188689, Time/step: 0.405168
+04/12/2026 18:40:49 - INFO -   Epoch: 2/15, Step: 584/1017, Lr: , Loss: 1.147069, Time/step: 0.401403
+04/12/2026 18:41:29 - INFO -   Epoch: 2/15, Step: 684/1017, Lr: , Loss: 1.187331, Time/step: 0.403588
+04/12/2026 18:42:10 - INFO -   Epoch: 2/15, Step: 784/1017, Lr: , Loss: 1.184746, Time/step: 0.404152
+04/12/2026 18:42:50 - INFO -   Epoch: 2/15, Step: 884/1017, Lr: , Loss: 1.115051, Time/step: 0.400501
+04/12/2026 18:43:30 - INFO -   Epoch: 2/15, Step: 984/1017, Lr: , Loss: 1.103914, Time/step: 0.404928
+04/12/2026 18:43:44 - INFO -   Epoch 2/15 Finished, Train Loss: 1.171774
+04/12/2026 18:43:52 - INFO -   Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+04/12/2026 18:44:29 - INFO -     Average Validation Loss: 2.3782
+PTBTokenizer tokenized 28339 tokens at 394514.73 tokens per second.
+PTBTokenizer tokenized 617049 tokens at 2051717.46 tokens per second.
+{'testlen': 25350, 'reflen': 25432, 'guess': [25350, 22360, 19370, 16380], 'correct': [21202, 12848, 6549, 2950]}
+ratio: 0.996775715633808
+04/12/2026 18:44:44 - INFO -   >>>  BLEU_1: 0.8337, BLEU_2: 0.6910, BLEU_3: 0.5439, BLEU_4: 0.4123
+04/12/2026 18:44:44 - INFO -   >>>  METEOR: 0.2996, ROUGE_L: 0.6243, CIDEr: 0.5578
+04/12/2026 18:44:44 - INFO -   The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5591, BLEU_4: 0.4040
+04/12/2026 18:45:12 - INFO -   Epoch: 3/15, Step: 68/1017, Lr: , Loss: 1.132768, Time/step: 0.278699
+04/12/2026 18:45:52 - INFO -   Epoch: 3/15, Step: 168/1017, Lr: , Loss: 1.243992, Time/step: 0.401041
+04/12/2026 18:46:32 - INFO -   Epoch: 3/15, Step: 268/1017, Lr: , Loss: 1.260691, Time/step: 0.398975
+04/12/2026 18:47:12 - INFO -   Epoch: 3/15, Step: 368/1017, Lr: , Loss: 1.153371, Time/step: 0.399597
+04/12/2026 18:47:52 - INFO -   Epoch: 3/15, Step: 468/1017, Lr: , Loss: 1.118555, Time/step: 0.397812
+04/12/2026 18:48:32 - INFO -   Epoch: 3/15, Step: 568/1017, Lr: , Loss: 1.167906, Time/step: 0.400324
+04/12/2026 18:49:12 - INFO -   Epoch: 3/15, Step: 668/1017, Lr: , Loss: 1.123474, Time/step: 0.401022
+04/12/2026 18:49:52 - INFO -   Epoch: 3/15, Step: 768/1017, Lr: , Loss: 1.173077, Time/step: 0.397260
+04/12/2026 18:50:31 - INFO -   Epoch: 3/15, Step: 868/1017, Lr: , Loss: 1.112803, Time/step: 0.399168
+04/12/2026 18:51:11 - INFO -   Epoch: 3/15, Step: 968/1017, Lr: , Loss: 1.120562, Time/step: 0.397327
+04/12/2026 18:51:31 - INFO -   Epoch 3/15 Finished, Train Loss: 1.149913
+04/12/2026 18:51:40 - INFO -   Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+04/12/2026 18:52:16 - INFO -     Average Validation Loss: 2.3633
+PTBTokenizer tokenized 28066 tokens at 391224.55 tokens per second.
+PTBTokenizer tokenized 617049 tokens at 2210808.56 tokens per second.
+{'testlen': 25076, 'reflen': 25203, 'guess': [25076, 22086, 19096, 16106], 'correct': [20951, 12739, 6507, 2965]}
+ratio: 0.9949609173510695
+04/12/2026 18:52:31 - INFO -   >>>  BLEU_1: 0.8313, BLEU_2: 0.6907, BLEU_3: 0.5448, BLEU_4: 0.4149
+04/12/2026 18:52:31 - INFO -   >>>  METEOR: 0.2998, ROUGE_L: 0.6233, CIDEr: 0.5628
+04/12/2026 18:52:39 - INFO -   Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+04/12/2026 18:52:39 - INFO -   The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5628, BLEU_4: 0.4149

@@ -1,0 +1,445 @@
+2026-04-16 17:18:05,460:INFO: Effective parameters:
+2026-04-16 17:18:05,461:INFO:   <<< batch_size: 64
+2026-04-16 17:18:05,461:INFO:   <<< batch_size_val: 128
+2026-04-16 17:18:05,461:INFO:   <<< beam_size: 5
+2026-04-16 17:18:05,461:INFO:   <<< bert_model: bert-base-uncased
+2026-04-16 17:18:05,461:INFO:   <<< cache_dir: 
+2026-04-16 17:18:05,461:INFO:   <<< coef_lr: 0.1
+2026-04-16 17:18:05,461:INFO:   <<< cross_model: cross-base
+2026-04-16 17:18:05,461:INFO:   <<< cross_num_hidden_layers: 2
+2026-04-16 17:18:05,461:INFO:   <<< data_path: data/msrvtt/MSRVTT_data.json
+2026-04-16 17:18:05,461:INFO:   <<< datatype: msrvtt
+2026-04-16 17:18:05,461:INFO:   <<< decoder_model: decoder-base
+2026-04-16 17:18:05,461:INFO:   <<< decoder_num_hidden_layers: 3
+2026-04-16 17:18:05,461:INFO:   <<< do_eval: False
+2026-04-16 17:18:05,461:INFO:   <<< do_lower_case: True
+2026-04-16 17:18:05,461:INFO:   <<< do_pretrain: False
+2026-04-16 17:18:05,461:INFO:   <<< do_train: True
+2026-04-16 17:18:05,461:INFO:   <<< epochs: 5
+2026-04-16 17:18:05,461:INFO:   <<< feature_framerate: 1
+2026-04-16 17:18:05,461:INFO:   <<< features_path: /teamspace/studios/this_studio/datasets/phihungcrr1701/msrvtt-clip-vitl14-features/versions/1/msrvtt_clip_vitl14_features.pickle
+2026-04-16 17:18:05,461:INFO:   <<< fp16: False
+2026-04-16 17:18:05,461:INFO:   <<< fp16_opt_level: O1
+2026-04-16 17:18:05,461:INFO:   <<< freeze_vit: True
+2026-04-16 17:18:05,461:INFO:   <<< gradient_accumulation_steps: 2
+2026-04-16 17:18:05,461:INFO:   <<< hard_negative_rate: 0.5
+2026-04-16 17:18:05,461:INFO:   <<< init_model: /teamspace/studios/this_studio/datasets/trnphmngcminh/video-captioning-cider-60/versions/1/pytorch_model.bin.best.0
+2026-04-16 17:18:05,461:INFO:   <<< local_rank: 0
+2026-04-16 17:18:05,461:INFO:   <<< lora: True
+2026-04-16 17:18:05,461:INFO:   <<< lora_alpha: 64
+2026-04-16 17:18:05,461:INFO:   <<< lora_dropout: 0.05
+2026-04-16 17:18:05,461:INFO:   <<< lora_r: 32
+2026-04-16 17:18:05,461:INFO:   <<< lr: 3e-05
+2026-04-16 17:18:05,461:INFO:   <<< lr_decay: 0.9
+2026-04-16 17:18:05,462:INFO:   <<< lr_lora: 0.0002
+2026-04-16 17:18:05,462:INFO:   <<< lr_qformer: 2e-05
+2026-04-16 17:18:05,462:INFO:   <<< margin: 0.1
+2026-04-16 17:18:05,462:INFO:   <<< max_frames: 48
+2026-04-16 17:18:05,462:INFO:   <<< max_txt_len: 20
+2026-04-16 17:18:05,462:INFO:   <<< max_words: 48
+2026-04-16 17:18:05,462:INFO:   <<< min_time: 5.0
+2026-04-16 17:18:05,462:INFO:   <<< n_display: 50
+2026-04-16 17:18:05,462:INFO:   <<< n_gpu: 1
+2026-04-16 17:18:05,462:INFO:   <<< n_pair: 1
+2026-04-16 17:18:05,462:INFO:   <<< negative_weighting: 1
+2026-04-16 17:18:05,462:INFO:   <<< num_query_token: 32
+2026-04-16 17:18:05,462:INFO:   <<< num_thread_reader: 4
+2026-04-16 17:18:05,462:INFO:   <<< output_dir: ckpts/ckpt_msrvtt_caption
+2026-04-16 17:18:05,462:INFO:   <<< qformer_checkpoint: Salesforce/blip2-opt-6.7b-coco
+2026-04-16 17:18:05,462:INFO:   <<< qformer_checkpoint_file: 
+2026-04-16 17:18:05,462:INFO:   <<< qformer_checkpoint_local_files_only: False
+2026-04-16 17:18:05,462:INFO:   <<< qformer_vision_width: 1408
+2026-04-16 17:18:05,462:INFO:   <<< sampled_use_mil: False
+2026-04-16 17:18:05,462:INFO:   <<< scst: True
+2026-04-16 17:18:05,462:INFO:   <<< seed: 42
+2026-04-16 17:18:05,462:INFO:   <<< stage_two: True
+2026-04-16 17:18:05,462:INFO:   <<< t5_model: google/flan-t5-xl
+2026-04-16 17:18:05,462:INFO:   <<< task_type: caption
+2026-04-16 17:18:05,462:INFO:   <<< text_num_hidden_layers: 12
+2026-04-16 17:18:05,462:INFO:   <<< train_csv: data/msrvtt/MSRVTT_train.9k.csv
+2026-04-16 17:18:05,462:INFO:   <<< use_mil: False
+2026-04-16 17:18:05,462:INFO:   <<< val_csv: data/msrvtt/MSRVTT_JSFUSION_test.csv
+2026-04-16 17:18:05,462:INFO:   <<< video_dim: 768
+2026-04-16 17:18:05,462:INFO:   <<< visual_model: visual-base
+2026-04-16 17:18:05,462:INFO:   <<< visual_num_hidden_layers: 6
+2026-04-16 17:18:05,462:INFO:   <<< warmup_proportion: 0.1
+2026-04-16 17:18:05,462:INFO:   <<< world_size: 1
+2026-04-16 17:18:05,463:INFO: device: cuda:0 n_gpu: 1
+2026-04-16 17:18:05,463:INFO: loading vocabulary file /teamspace/studios/this_studio/video-captioning/modules/bert-base-uncased/vocab.txt
+2026-04-16 17:18:15,461:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/bert-base-uncased
+2026-04-16 17:18:15,462:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-16 17:18:15,462:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/visual-base
+2026-04-16 17:18:15,463:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+2026-04-16 17:18:15,463:INFO: Weight doesn't exsits. /teamspace/studios/this_studio/video-captioning/modules/visual-base/visual_pytorch_model.bin
+2026-04-16 17:18:15,463:WARNING: Set visual_config.vocab_size: 768.
+2026-04-16 17:18:15,463:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/cross-base
+2026-04-16 17:18:15,463:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+2026-04-16 17:18:15,463:INFO: Weight doesn't exsits. /teamspace/studios/this_studio/video-captioning/modules/cross-base/cross_pytorch_model.bin
+2026-04-16 17:18:15,463:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/decoder-base
+2026-04-16 17:18:15,463:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-16 17:18:15,463:INFO: Weight doesn't exsits. /teamspace/studios/this_studio/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+2026-04-16 17:18:15,463:WARNING: Stage-One:False, Stage-Two:True
+2026-04-16 17:18:15,463:WARNING: Set bert_config.num_hidden_layers: 12.
+2026-04-16 17:18:16,053:WARNING: Set visual_config.num_hidden_layers: 6.
+2026-04-16 17:18:16,269:WARNING: Freeze vision encoder.
+2026-04-16 17:18:16,269:WARNING: Set cross_config.num_hidden_layers: 2.
+2026-04-16 17:18:16,370:WARNING: Add QFormer visual projection: 768 -> 1408.
+2026-04-16 17:18:20,461:INFO: QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+2026-04-16 17:18:38,232:INFO: Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+2026-04-16 17:19:21,936:WARNING: Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj. Skipped 42 other tensors.
+2026-04-16 17:19:22,832:INFO: --------------------
+2026-04-16 17:19:22,832:INFO: Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   similarity_dense.weight
+   similarity_dense.bias
+   normalize_video.visual_norm2d.weight
+   normalize_video.visual_norm2d.bias
+2026-04-16 17:20:23,050:INFO: Effective parameters:
+2026-04-16 17:20:23,050:INFO:   <<< batch_size: 64
+2026-04-16 17:20:23,050:INFO:   <<< batch_size_val: 128
+2026-04-16 17:20:23,050:INFO:   <<< beam_size: 5
+2026-04-16 17:20:23,050:INFO:   <<< bert_model: bert-base-uncased
+2026-04-16 17:20:23,050:INFO:   <<< cache_dir: 
+2026-04-16 17:20:23,050:INFO:   <<< coef_lr: 0.1
+2026-04-16 17:20:23,051:INFO:   <<< cross_model: cross-base
+2026-04-16 17:20:23,051:INFO:   <<< cross_num_hidden_layers: 2
+2026-04-16 17:20:23,051:INFO:   <<< data_path: data/msrvtt/MSRVTT_data.json
+2026-04-16 17:20:23,051:INFO:   <<< datatype: msrvtt
+2026-04-16 17:20:23,051:INFO:   <<< decoder_model: decoder-base
+2026-04-16 17:20:23,051:INFO:   <<< decoder_num_hidden_layers: 3
+2026-04-16 17:20:23,051:INFO:   <<< do_eval: False
+2026-04-16 17:20:23,051:INFO:   <<< do_lower_case: True
+2026-04-16 17:20:23,051:INFO:   <<< do_pretrain: False
+2026-04-16 17:20:23,051:INFO:   <<< do_train: True
+2026-04-16 17:20:23,051:INFO:   <<< epochs: 5
+2026-04-16 17:20:23,051:INFO:   <<< feature_framerate: 1
+2026-04-16 17:20:23,051:INFO:   <<< features_path: /teamspace/studios/this_studio/datasets/phihungcrr1701/msrvtt-clip-vitl14-features/versions/1/msrvtt_clip_vitl14_features.pickle
+2026-04-16 17:20:23,051:INFO:   <<< fp16: False
+2026-04-16 17:20:23,051:INFO:   <<< fp16_opt_level: O1
+2026-04-16 17:20:23,051:INFO:   <<< freeze_vit: True
+2026-04-16 17:20:23,051:INFO:   <<< gradient_accumulation_steps: 2
+2026-04-16 17:20:23,051:INFO:   <<< hard_negative_rate: 0.5
+2026-04-16 17:20:23,051:INFO:   <<< init_model: /teamspace/studios/this_studio/datasets/trnphmngcminh/video-captioning-cider-60/versions/1/pytorch_model.bin.best.0
+2026-04-16 17:20:23,051:INFO:   <<< local_rank: 0
+2026-04-16 17:20:23,051:INFO:   <<< lora: True
+2026-04-16 17:20:23,051:INFO:   <<< lora_alpha: 64
+2026-04-16 17:20:23,051:INFO:   <<< lora_dropout: 0.05
+2026-04-16 17:20:23,051:INFO:   <<< lora_r: 32
+2026-04-16 17:20:23,051:INFO:   <<< lr: 3e-05
+2026-04-16 17:20:23,051:INFO:   <<< lr_decay: 0.9
+2026-04-16 17:20:23,051:INFO:   <<< lr_lora: 0.0002
+2026-04-16 17:20:23,051:INFO:   <<< lr_qformer: 2e-05
+2026-04-16 17:20:23,051:INFO:   <<< margin: 0.1
+2026-04-16 17:20:23,051:INFO:   <<< max_frames: 48
+2026-04-16 17:20:23,051:INFO:   <<< max_txt_len: 20
+2026-04-16 17:20:23,051:INFO:   <<< max_words: 48
+2026-04-16 17:20:23,051:INFO:   <<< min_time: 5.0
+2026-04-16 17:20:23,051:INFO:   <<< n_display: 50
+2026-04-16 17:20:23,051:INFO:   <<< n_gpu: 1
+2026-04-16 17:20:23,051:INFO:   <<< n_pair: 1
+2026-04-16 17:20:23,051:INFO:   <<< negative_weighting: 1
+2026-04-16 17:20:23,051:INFO:   <<< num_query_token: 32
+2026-04-16 17:20:23,051:INFO:   <<< num_thread_reader: 4
+2026-04-16 17:20:23,051:INFO:   <<< output_dir: ckpts/ckpt_msrvtt_caption
+2026-04-16 17:20:23,051:INFO:   <<< qformer_checkpoint: Salesforce/blip2-opt-6.7b-coco
+2026-04-16 17:20:23,051:INFO:   <<< qformer_checkpoint_file: 
+2026-04-16 17:20:23,051:INFO:   <<< qformer_checkpoint_local_files_only: False
+2026-04-16 17:20:23,051:INFO:   <<< qformer_vision_width: 1408
+2026-04-16 17:20:23,051:INFO:   <<< sampled_use_mil: False
+2026-04-16 17:20:23,051:INFO:   <<< scst: True
+2026-04-16 17:20:23,051:INFO:   <<< seed: 42
+2026-04-16 17:20:23,052:INFO:   <<< stage_two: True
+2026-04-16 17:20:23,052:INFO:   <<< t5_model: google/flan-t5-xl
+2026-04-16 17:20:23,052:INFO:   <<< task_type: caption
+2026-04-16 17:20:23,052:INFO:   <<< text_num_hidden_layers: 12
+2026-04-16 17:20:23,052:INFO:   <<< train_csv: data/msrvtt/MSRVTT_train.9k.csv
+2026-04-16 17:20:23,052:INFO:   <<< use_mil: False
+2026-04-16 17:20:23,052:INFO:   <<< val_csv: data/msrvtt/MSRVTT_JSFUSION_test.csv
+2026-04-16 17:20:23,052:INFO:   <<< video_dim: 768
+2026-04-16 17:20:23,052:INFO:   <<< visual_model: visual-base
+2026-04-16 17:20:23,052:INFO:   <<< visual_num_hidden_layers: 6
+2026-04-16 17:20:23,052:INFO:   <<< warmup_proportion: 0.1
+2026-04-16 17:20:23,052:INFO:   <<< world_size: 1
+2026-04-16 17:20:23,052:INFO: device: cuda:0 n_gpu: 1
+2026-04-16 17:20:23,052:INFO: loading vocabulary file /teamspace/studios/this_studio/video-captioning/modules/bert-base-uncased/vocab.txt
+2026-04-16 17:20:26,944:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/bert-base-uncased
+2026-04-16 17:20:26,944:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-16 17:20:26,944:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/visual-base
+2026-04-16 17:20:26,944:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+2026-04-16 17:20:26,944:INFO: Weight doesn't exsits. /teamspace/studios/this_studio/video-captioning/modules/visual-base/visual_pytorch_model.bin
+2026-04-16 17:20:26,944:WARNING: Set visual_config.vocab_size: 768.
+2026-04-16 17:20:26,944:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/cross-base
+2026-04-16 17:20:26,945:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+2026-04-16 17:20:26,945:INFO: Weight doesn't exsits. /teamspace/studios/this_studio/video-captioning/modules/cross-base/cross_pytorch_model.bin
+2026-04-16 17:20:26,945:INFO: loading archive file /teamspace/studios/this_studio/video-captioning/modules/decoder-base
+2026-04-16 17:20:26,945:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-16 17:20:26,945:INFO: Weight doesn't exsits. /teamspace/studios/this_studio/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+2026-04-16 17:20:26,945:WARNING: Stage-One:False, Stage-Two:True
+2026-04-16 17:20:26,945:WARNING: Set bert_config.num_hidden_layers: 12.
+2026-04-16 17:20:27,533:WARNING: Set visual_config.num_hidden_layers: 6.
+2026-04-16 17:20:27,755:WARNING: Freeze vision encoder.
+2026-04-16 17:20:27,755:WARNING: Set cross_config.num_hidden_layers: 2.
+2026-04-16 17:20:27,858:WARNING: Add QFormer visual projection: 768 -> 1408.
+2026-04-16 17:20:28,583:INFO: QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+2026-04-16 17:20:29,085:INFO: Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+2026-04-16 17:20:32,629:WARNING: Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj. Skipped 42 other tensors.
+2026-04-16 17:20:33,389:INFO: --------------------
+2026-04-16 17:20:33,390:INFO: Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   similarity_dense.weight
+   similarity_dense.bias
+   normalize_video.visual_norm2d.weight
+   normalize_video.visual_norm2d.bias
+2026-04-16 17:20:34,395:INFO: Using pycocoevalcap for evaluation metrics
+2026-04-16 17:20:39,385:INFO: ***** Running test *****
+2026-04-16 17:20:39,385:INFO:   Num examples = 2990
+2026-04-16 17:20:39,385:INFO:   Batch size = 128
+2026-04-16 17:20:39,385:INFO:   Num steps = 24
+2026-04-16 17:20:49,241:INFO: CorpusCider: pre-computed IDF from 6513 videos, 130260 total refs, 1203418 unique n-grams
+2026-04-16 17:20:49,384:INFO: ***** Running training *****
+2026-04-16 17:20:49,385:INFO:   Num examples = 130260
+2026-04-16 17:20:49,385:INFO:   Batch size = 64
+2026-04-16 17:20:49,385:INFO:   Num steps = 10180
+2026-04-16 17:23:34,256:INFO: Epoch: 1/5, Step: 100/2035, Lr: 0.000020, Loss: -0.037719, Time/step: 1.648611
+2026-04-16 17:26:13,735:INFO: Epoch: 1/5, Step: 200/2035, Lr: 0.000039, Loss: -0.041553, Time/step: 1.594782
+2026-04-16 17:28:52,483:INFO: Epoch: 1/5, Step: 300/2035, Lr: 0.000059, Loss: -0.058806, Time/step: 1.587475
+2026-04-16 17:31:32,587:INFO: Epoch: 1/5, Step: 400/2035, Lr: 0.000079, Loss: 0.003613, Time/step: 1.601019
+2026-04-16 17:34:10,848:INFO: Epoch: 1/5, Step: 500/2035, Lr: 0.000098, Loss: 0.043727, Time/step: 1.582612
+2026-04-16 17:36:48,274:INFO: Epoch: 1/5, Step: 600/2035, Lr: 0.000118, Loss: -0.110237, Time/step: 1.574252
+2026-04-16 17:39:26,613:INFO: Epoch: 1/5, Step: 700/2035, Lr: 0.000138, Loss: 0.063359, Time/step: 1.583384
+2026-04-16 17:42:05,445:INFO: Epoch: 1/5, Step: 800/2035, Lr: 0.000157, Loss: 0.025216, Time/step: 1.588316
+2026-04-16 17:44:45,011:INFO: Epoch: 1/5, Step: 900/2035, Lr: 0.000177, Loss: 0.005789, Time/step: 1.595657
+2026-04-16 17:47:23,616:INFO: Epoch: 1/5, Step: 1000/2035, Lr: 0.000196, Loss: -0.080769, Time/step: 1.586045
+2026-04-16 17:50:02,987:INFO: Epoch: 1/5, Step: 1100/2035, Lr: 0.000200, Loss: 0.069129, Time/step: 1.593707
+2026-04-16 17:52:37,548:INFO: Epoch: 1/5, Step: 1200/2035, Lr: 0.000200, Loss: 0.023673, Time/step: 1.545605
+2026-04-16 17:55:11,545:INFO: Epoch: 1/5, Step: 1300/2035, Lr: 0.000200, Loss: 0.148658, Time/step: 1.539965
+2026-04-16 17:57:44,561:INFO: Epoch: 1/5, Step: 1400/2035, Lr: 0.000200, Loss: 0.116194, Time/step: 1.530150
+2026-04-16 18:00:17,588:INFO: Epoch: 1/5, Step: 1500/2035, Lr: 0.000200, Loss: -0.352766, Time/step: 1.530262
+2026-04-16 18:02:50,212:INFO: Epoch: 1/5, Step: 1600/2035, Lr: 0.000200, Loss: 0.360271, Time/step: 1.526242
+2026-04-16 18:05:21,854:INFO: Epoch: 1/5, Step: 1700/2035, Lr: 0.000200, Loss: -0.177710, Time/step: 1.516408
+2026-04-16 18:08:02,050:INFO: Epoch: 1/5, Step: 1800/2035, Lr: 0.000200, Loss: -0.568945, Time/step: 1.601947
+2026-04-16 18:10:38,000:INFO: Epoch: 1/5, Step: 1900/2035, Lr: 0.000200, Loss: -0.018937, Time/step: 1.559490
+2026-04-16 18:13:12,770:INFO: Epoch: 1/5, Step: 2000/2035, Lr: 0.000200, Loss: -0.003840, Time/step: 1.547692
+2026-04-16 18:14:07,078:INFO: Epoch 1/5 Finished, Train Loss: -0.091225
+2026-04-16 18:14:13,007:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-16 18:14:35,460:INFO:   Average Validation Loss: 133.6403
+2026-04-16 18:14:49,156:INFO: >>>  BLEU_1: 0.2555, BLEU_2: 0.0130, BLEU_3: 0.0000, BLEU_4: 0.0000
+2026-04-16 18:14:49,157:INFO: >>>  METEOR: 0.0587, ROUGE_L: 0.2722, CIDEr: 0.0000
+2026-04-16 18:14:55,079:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-04-16 18:14:55,080:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.0000, BLEU_4: 0.0000
+2026-04-16 18:16:39,428:INFO: Epoch: 2/5, Step: 66/2035, Lr: 0.000200, Loss: -0.303908, Time/step: 1.042610
+2026-04-16 18:19:14,256:INFO: Epoch: 2/5, Step: 166/2035, Lr: 0.000200, Loss: 0.155268, Time/step: 1.548276
+2026-04-16 18:21:49,866:INFO: Epoch: 2/5, Step: 266/2035, Lr: 0.000200, Loss: -0.008602, Time/step: 1.556089
+2026-04-16 18:24:25,727:INFO: Epoch: 2/5, Step: 366/2035, Lr: 0.000200, Loss: -0.028210, Time/step: 1.558592
+2026-04-16 18:27:02,230:INFO: Epoch: 2/5, Step: 466/2035, Lr: 0.000200, Loss: 0.000952, Time/step: 1.565017
+2026-04-16 18:29:37,322:INFO: Epoch: 2/5, Step: 566/2035, Lr: 0.000200, Loss: 0.020827, Time/step: 1.550914
+2026-04-16 18:32:11,784:INFO: Epoch: 2/5, Step: 666/2035, Lr: 0.000200, Loss: -0.603649, Time/step: 1.544609
+2026-04-16 18:34:46,618:INFO: Epoch: 2/5, Step: 766/2035, Lr: 0.000200, Loss: -0.343355, Time/step: 1.548332
+2026-04-16 18:37:20,622:INFO: Epoch: 2/5, Step: 866/2035, Lr: 0.000200, Loss: 0.135908, Time/step: 1.540028
+2026-04-16 18:39:54,512:INFO: Epoch: 2/5, Step: 966/2035, Lr: 0.000200, Loss: 0.137713, Time/step: 1.538889
+2026-04-16 18:42:25,750:INFO: Epoch: 2/5, Step: 1066/2035, Lr: 0.000200, Loss: -0.080623, Time/step: 1.512365
+2026-04-16 18:44:54,848:INFO: Epoch: 2/5, Step: 1166/2035, Lr: 0.000200, Loss: 0.031261, Time/step: 1.490970
+2026-04-16 18:47:24,022:INFO: Epoch: 2/5, Step: 1266/2035, Lr: 0.000200, Loss: 0.092747, Time/step: 1.491734
+2026-04-16 18:49:52,703:INFO: Epoch: 2/5, Step: 1366/2035, Lr: 0.000200, Loss: 0.252189, Time/step: 1.486804
+2026-04-16 18:52:23,416:INFO: Epoch: 2/5, Step: 1466/2035, Lr: 0.000200, Loss: 0.127911, Time/step: 1.507112
+2026-04-16 18:54:57,694:INFO: Epoch: 2/5, Step: 1566/2035, Lr: 0.000200, Loss: -0.005468, Time/step: 1.542777
+2026-04-16 18:57:31,739:INFO: Epoch: 2/5, Step: 1666/2035, Lr: 0.000200, Loss: -0.064644, Time/step: 1.540437
+2026-04-16 19:00:05,668:INFO: Epoch: 2/5, Step: 1766/2035, Lr: 0.000200, Loss: -0.406340, Time/step: 1.539285
+2026-04-16 19:02:40,062:INFO: Epoch: 2/5, Step: 1866/2035, Lr: 0.000200, Loss: -0.008443, Time/step: 1.543923
+2026-04-16 19:05:14,127:INFO: Epoch: 2/5, Step: 1966/2035, Lr: 0.000200, Loss: 0.341311, Time/step: 1.540639
+2026-04-16 19:06:59,079:INFO: Epoch 2/5 Finished, Train Loss: -0.046018
+2026-04-16 19:07:12,651:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-16 19:07:35,002:INFO:   Average Validation Loss: 133.4764
+2026-04-16 19:07:48,299:INFO: >>>  BLEU_1: 0.2338, BLEU_2: 0.0118, BLEU_3: 0.0000, BLEU_4: 0.0000
+2026-04-16 19:07:48,300:INFO: >>>  METEOR: 0.0581, ROUGE_L: 0.2607, CIDEr: 0.0000
+2026-04-16 19:07:48,310:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.0000, BLEU_4: 0.0000
+2026-04-16 19:08:37,982:INFO: Epoch: 3/5, Step: 32/2035, Lr: 0.000200, Loss: 0.230376, Time/step: 0.495841
+2026-04-16 19:11:08,391:INFO: Epoch: 3/5, Step: 132/2035, Lr: 0.000200, Loss: 0.047816, Time/step: 1.504075
+2026-04-16 19:13:39,057:INFO: Epoch: 3/5, Step: 232/2035, Lr: 0.000200, Loss: -0.000000, Time/step: 1.506649
+2026-04-16 19:16:10,111:INFO: Epoch: 3/5, Step: 332/2035, Lr: 0.000200, Loss: -0.160255, Time/step: 1.510529
+2026-04-16 19:18:36,995:INFO: Epoch: 3/5, Step: 432/2035, Lr: 0.000200, Loss: 0.252183, Time/step: 1.468830
+2026-04-16 19:21:02,573:INFO: Epoch: 3/5, Step: 532/2035, Lr: 0.000200, Loss: 0.352051, Time/step: 1.455773
+2026-04-16 19:23:31,668:INFO: Epoch: 3/5, Step: 632/2035, Lr: 0.000200, Loss: -0.029916, Time/step: 1.490936
+2026-04-16 19:26:06,057:INFO: Epoch: 3/5, Step: 732/2035, Lr: 0.000200, Loss: 0.220474, Time/step: 1.543879
+2026-04-16 19:28:42,402:INFO: Epoch: 3/5, Step: 832/2035, Lr: 0.000200, Loss: 0.197420, Time/step: 1.563442
+2026-04-16 19:31:19,127:INFO: Epoch: 3/5, Step: 932/2035, Lr: 0.000200, Loss: 0.178340, Time/step: 1.567244
