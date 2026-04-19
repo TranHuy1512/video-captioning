@@ -26,6 +26,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
             split_type="",
             t5_tokenizer=None,
             max_txt_len=32,
+            scst=False,
     ):
         self.csv = pd.read_csv(csv_path)
         self.data = json.load(open(json_path, 'r'))
@@ -37,6 +38,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.t5_tokenizer = t5_tokenizer
         self.max_txt_len = max_txt_len
 
+        self.scst = scst
         self.feature_size = self.feature_dict[self.csv['video_id'].values[0]].shape[-1]
 
         assert split_type in ["train", "val", "test"]
@@ -50,7 +52,15 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.sample_len = 0
         self.sentences_dict = {}
         self.video_sentences_dict = defaultdict(list)
-        if split_type == "train":  # expand all sentence to train
+        if split_type == "train" and scst:
+            # SCST mode: one sample per video (6,513); caption is randomly
+            # picked in __getitem__ from video_sentences_dict each time.
+            for itm in self.data['sentences']:
+                if itm['video_id'] in choiced_video_ids:
+                    self.video_sentences_dict[itm['video_id']].append(itm['caption'])
+            for vid in choiced_video_ids:
+                self.sentences_dict[len(self.sentences_dict)] = (vid, None)
+        elif split_type == "train":  # XE mode: expand all sentences
             for itm in self.data['sentences']:
                 if itm['video_id'] in choiced_video_ids:
                     self.sentences_dict[len(self.sentences_dict)] = (itm['video_id'], itm['caption'])
@@ -241,6 +251,10 @@ class MSRVTT_Caption_DataLoader(Dataset):
 
     def __getitem__(self, idx):
         video_id, caption = self.sentences_dict[idx]
+        # SCST mode: randomly pick one caption per video each access
+        if caption is None and self.scst:
+            captions = self.video_sentences_dict[video_id]
+            caption = random.choice(captions)
 
         pairs_text, pairs_mask, pairs_segment, \
         pairs_masked_text, pairs_token_labels, \

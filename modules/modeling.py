@@ -241,7 +241,18 @@ class UniVL(UniVLPreTrainedModel):
             if self.train_sim_after_cross is False:
                 # Decoder ===>
                 self.scst = getattr(self.task_config, "scst", False)
-                self.beam_size = getattr(self.task_config, "beam_size", 5)
+                self.eval_beam_size = getattr(
+                    self.task_config,
+                    "eval_beam_size",
+                    getattr(self.task_config, "beam_size", 5),
+                )
+                self.scst_num_samples = getattr(
+                    self.task_config,
+                    "scst_num_samples",
+                    getattr(self.task_config, "beam_size", self.eval_beam_size),
+                )
+                # Backwards compatibility for older call sites/check scripts.
+                self.beam_size = self.eval_beam_size
                 self.max_txt_len = getattr(self.task_config, "max_txt_len", 32)
                 self.prompt = " A video of"
 
@@ -545,11 +556,11 @@ class UniVL(UniVLPreTrainedModel):
     #             do_sample=False,
     #             top_p=0.9,
     #             temperature=1,
-    #             num_beams=self.beam_size,
+    #             num_beams=self.eval_beam_size,
     #             max_length=self.max_txt_len,
     #             repetition_penalty=1.2,
     #             length_penalty=1.0,
-    #             num_return_sequences=self.beam_size,
+    #             num_return_sequences=self.scst_num_samples,
     #             return_dict_in_generate=True,
     #             output_scores=True,
     #         )
@@ -561,8 +572,8 @@ class UniVL(UniVLPreTrainedModel):
     #     pad_token_id = self.t5_tokenizer.pad_token_id
     #     labels_mask = labels.ne(pad_token_id)
 
-    #     repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.beam_size, dim=0)
-    #     repeated_encoder_atts = encoder_atts.repeat_interleave(self.beam_size, dim=0)
+    #     repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
+    #     repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
     #     score_outputs = self.t5_model(
     #         inputs_embeds=repeated_inputs_embeds,
     #         attention_mask=repeated_encoder_atts,
@@ -577,7 +588,7 @@ class UniVL(UniVLPreTrainedModel):
     #     selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
     #     output_length = labels_mask.sum(dim=1).clamp(min=1)
     #     sequences_scores = selected_log_probs.sum(dim=1) / output_length
-    #     sequences_scores = sequences_scores.view(batch_size, self.beam_size)
+    #     sequences_scores = sequences_scores.view(batch_size, self.scst_num_samples)
 
     #     caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
     #     caps_gen = [text.strip() for text in caps_gen]
@@ -590,12 +601,12 @@ class UniVL(UniVLPreTrainedModel):
     #         gt_ids = output_caption_ids
     #     gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
     #     caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
-    #     caps_gt = list(itertools.chain(*([c] * self.beam_size for c in caps_gt)))
+    #     caps_gt = list(itertools.chain(*([c] * self.scst_num_samples for c in caps_gt)))
     #     caps_gt = [[c] for c in caps_gt]
 
     #     caps_gen, caps_gt = tokenize(caps_gt, caps_gen)
     #     reward = Cider().compute_score(caps_gt, caps_gen)[1].astype(np.float32)
-    #     reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.beam_size)
+    #     reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
     #     reward_baseline = torch.mean(reward, -1, keepdim=True)
 
     #     loss = -(sequences_scores) * (reward - reward_baseline).detach()
@@ -632,27 +643,39 @@ class UniVL(UniVLPreTrainedModel):
         batch_size = output_caption_ids.size(0)
         pad_token_id = self.t5_tokenizer.pad_token_id
 
-        # ── 1. Sample sequences (no grad) ──
+        # ── 1. Sample sequences and eval-style baseline (no grad) ──
         with torch.no_grad():
             outputs = self.t5_model.generate(
                 inputs_embeds=inputs_embeds,
                 attention_mask=encoder_atts,
                 do_sample=True,
-                top_p=0.95,
-                temperature=1.2,
+                top_p=0.9,
+                temperature=0.8,
                 num_beams=1,
                 max_length=self.max_txt_len,
                 min_length=3,
                 repetition_penalty=1.2,
-                num_return_sequences=self.beam_size,
+                num_return_sequences=self.scst_num_samples,
                 return_dict_in_generate=True,
             )
-            generated_ids = outputs.sequences  # (B*beam, L)
+            generated_ids = outputs.sequences  # (B*scst_num_samples, L)
+
+            baseline_ids = self.t5_model.generate(
+                inputs_embeds=inputs_embeds,
+                attention_mask=encoder_atts,
+                do_sample=False,
+                num_beams=max(1, self.eval_beam_size),
+                max_length=self.max_txt_len,
+                repetition_penalty=1.2,
+                length_penalty=1.0,
+            )
 
         # ── 2. Compute CIDEr reward using ALL GT references (no grad) ──
         with torch.no_grad():
             caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             caps_gen = [t.strip() for t in caps_gen]
+            caps_baseline = self.t5_tokenizer.batch_decode(baseline_ids, skip_special_tokens=True)
+            caps_baseline = [t.strip() for t in caps_baseline]
 
             # Build GT references for CIDEr computation
             if gt_refs is not None and len(gt_refs) == batch_size:
@@ -660,7 +683,7 @@ class UniVL(UniVLPreTrainedModel):
                 # Each element has all reference captions for that video (e.g. 20 for MSRVTT)
                 caps_gt_repeated = []
                 for sample_refs in gt_refs:
-                    for _ in range(self.beam_size):
+                    for _ in range(self.scst_num_samples):
                         caps_gt_repeated.append(sample_refs)  # all refs for this video
             else:
                 # Fallback: decode single GT from t5_output_caption_ids (legacy behavior)
@@ -668,23 +691,30 @@ class UniVL(UniVLPreTrainedModel):
                 gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
                 caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
                 caps_gt_repeated = [[c] for c in itertools.chain.from_iterable(
-                    [c] * self.beam_size for c in caps_gt
+                    [c] * self.scst_num_samples for c in caps_gt
                 )]
 
             caps_gt_tok, caps_gen_tok = tokenize(caps_gt_repeated, caps_gen)
             reward = self._get_cider_scorer().compute_score(caps_gt_tok, caps_gen_tok)[1].astype(np.float32)
-            reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.beam_size)
-            reward_baseline = reward.mean(dim=-1, keepdim=True)
-            advantage = (reward - reward_baseline)  # (B, beam)
+            reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
+
+            if gt_refs is not None and len(gt_refs) == batch_size:
+                caps_gt_baseline = gt_refs
+            else:
+                caps_gt_baseline = [[c] for c in caps_gt]
+            caps_gt_baseline_tok, caps_baseline_tok = tokenize(caps_gt_baseline, caps_baseline)
+            reward_baseline = self._get_cider_scorer().compute_score(
+                caps_gt_baseline_tok, caps_baseline_tok
+            )[1].astype(np.float32)
+            reward_baseline = torch.from_numpy(reward_baseline).to(inputs_embeds.device).view(batch_size, 1)
+            advantage = (reward - reward_baseline)  # (B, scst_num_samples)
 
         # ── 3. Forward pass WITH GRAD for log probs ──
-        # IMPORTANT: Detach inputs_embeds so SCST gradients only update T5 decoder (LoRA),
-        # NOT the QFormer/visual encoder. RL gradients are too noisy for the encoder.
-        repeated_inputs_embeds = inputs_embeds.detach().repeat_interleave(self.beam_size, dim=0)   # (B*beam, L, H)
-        repeated_encoder_atts = encoder_atts.repeat_interleave(self.beam_size, dim=0)     # (B*beam, L)
+        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)   # (B*scst_num_samples, L, H)
+        repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)     # (B*scst_num_samples, L)
 
-        decoder_input_ids = generated_ids[:, :-1].contiguous()   # (B*beam, L-1)
-        labels = generated_ids[:, 1:].contiguous()                # (B*beam, L-1)
+        decoder_input_ids = generated_ids[:, :-1].contiguous()   # (B*scst_num_samples, L-1)
+        labels = generated_ids[:, 1:].contiguous()                # (B*scst_num_samples, L-1)
 
         score_outputs = self.t5_model(
             inputs_embeds=repeated_inputs_embeds,
@@ -693,27 +723,23 @@ class UniVL(UniVLPreTrainedModel):
             return_dict=True,
         )
 
-        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)   # (B*beam, L-1, vocab)
+        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)   # (B*scst_num_samples, L-1, vocab)
         selected_log_probs = token_log_probs.gather(
             dim=-1, index=labels.unsqueeze(-1)
-        ).squeeze(-1)                                                    # (B*beam, L-1)
+        ).squeeze(-1)                                                    # (B*scst_num_samples, L-1)
 
         labels_mask = labels.ne(pad_token_id)
         selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
         output_length = labels_mask.sum(dim=1).clamp(min=1)
-        sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(batch_size, self.beam_size)
+        sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(batch_size, self.scst_num_samples)
 
         # ── 4. SCST loss ──
-        # Normalize advantage to prevent gradient explosion from large CIDEr magnitudes
-        advantage_std = advantage.std()
-        if advantage_std > 1e-6:
-            advantage = advantage / advantage_std
         loss = -(sequences_scores * advantage.detach())
         return loss.mean()
 
     def generate_caption_ids(self, visual_output, video_mask, num_beams=None, max_length=None):
         if num_beams is None:
-            num_beams = max(1, getattr(self, "beam_size", 1))
+            num_beams = max(1, getattr(self, "eval_beam_size", getattr(self, "beam_size", 1)))
         if max_length is None:
             max_length = getattr(self, "max_txt_len", 32)
 

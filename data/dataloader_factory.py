@@ -62,6 +62,7 @@ def dataloader_youcook_test(args, tokenizer, logger, t5_tokenizer=None):
 
 def dataloader_msrvtt_train(args, tokenizer, t5_tokenizer=None):
     max_txt_len = getattr(args, 'max_txt_len', 32)
+    scst = getattr(args, 'scst', False)
     msrvtt_dataset = MSRVTT_Caption_DataLoader(
         csv_path=args.train_csv,
         json_path=args.data_path,
@@ -73,6 +74,7 @@ def dataloader_msrvtt_train(args, tokenizer, t5_tokenizer=None):
         split_type="train",
         t5_tokenizer=t5_tokenizer,
         max_txt_len=max_txt_len,
+        scst=scst,
     )
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(msrvtt_dataset)

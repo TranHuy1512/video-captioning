@@ -1,0 +1,522 @@
+2026-04-17 17:38:49,607:INFO: Effective parameters:
+2026-04-17 17:38:49,607:INFO:   <<< batch_size: 64
+2026-04-17 17:38:49,607:INFO:   <<< batch_size_val: 128
+2026-04-17 17:38:49,607:INFO:   <<< beam_size: 5
+2026-04-17 17:38:49,607:INFO:   <<< bert_model: bert-base-uncased
+2026-04-17 17:38:49,607:INFO:   <<< cache_dir: 
+2026-04-17 17:38:49,607:INFO:   <<< coef_lr: 0.1
+2026-04-17 17:38:49,607:INFO:   <<< cross_model: cross-base
+2026-04-17 17:38:49,607:INFO:   <<< cross_num_hidden_layers: 2
+2026-04-17 17:38:49,607:INFO:   <<< data_path: data/msrvtt/MSRVTT_data.json
+2026-04-17 17:38:49,607:INFO:   <<< datatype: msrvtt
+2026-04-17 17:38:49,608:INFO:   <<< decoder_model: decoder-base
+2026-04-17 17:38:49,608:INFO:   <<< decoder_num_hidden_layers: 3
+2026-04-17 17:38:49,608:INFO:   <<< do_eval: False
+2026-04-17 17:38:49,608:INFO:   <<< do_lower_case: True
+2026-04-17 17:38:49,608:INFO:   <<< do_pretrain: False
+2026-04-17 17:38:49,608:INFO:   <<< do_train: True
+2026-04-17 17:38:49,608:INFO:   <<< epochs: 15
+2026-04-17 17:38:49,608:INFO:   <<< feature_framerate: 1
+2026-04-17 17:38:49,608:INFO:   <<< features_path: /workspace/project/datasets/phihungcrr1701/msrvtt-clip-vitl14-features/versions/1/msrvtt_clip_vitl14_features.pickle
+2026-04-17 17:38:49,608:INFO:   <<< fp16: False
+2026-04-17 17:38:49,608:INFO:   <<< fp16_opt_level: O1
+2026-04-17 17:38:49,608:INFO:   <<< freeze_vit: True
+2026-04-17 17:38:49,608:INFO:   <<< gradient_accumulation_steps: 2
+2026-04-17 17:38:49,608:INFO:   <<< hard_negative_rate: 0.5
+2026-04-17 17:38:49,608:INFO:   <<< init_model: /workspace/project/datasets/trnphmngcminh/cider-58-scst-loss-v1/versions/1/pytorch_model.bin.best.0
+2026-04-17 17:38:49,608:INFO:   <<< local_rank: 0
+2026-04-17 17:38:49,608:INFO:   <<< lora: True
+2026-04-17 17:38:49,608:INFO:   <<< lora_alpha: 64
+2026-04-17 17:38:49,608:INFO:   <<< lora_dropout: 0.05
+2026-04-17 17:38:49,608:INFO:   <<< lora_r: 32
+2026-04-17 17:38:49,608:INFO:   <<< lr: 5e-06
+2026-04-17 17:38:49,608:INFO:   <<< lr_decay: 0.9
+2026-04-17 17:38:49,608:INFO:   <<< lr_lora: 3e-06
+2026-04-17 17:38:49,608:INFO:   <<< lr_qformer: 5e-06
+2026-04-17 17:38:49,608:INFO:   <<< margin: 0.1
+2026-04-17 17:38:49,608:INFO:   <<< max_frames: 48
+2026-04-17 17:38:49,608:INFO:   <<< max_txt_len: 20
+2026-04-17 17:38:49,608:INFO:   <<< max_words: 48
+2026-04-17 17:38:49,608:INFO:   <<< min_time: 5.0
+2026-04-17 17:38:49,608:INFO:   <<< n_display: 50
+2026-04-17 17:38:49,608:INFO:   <<< n_gpu: 1
+2026-04-17 17:38:49,608:INFO:   <<< n_pair: 1
+2026-04-17 17:38:49,608:INFO:   <<< negative_weighting: 1
+2026-04-17 17:38:49,608:INFO:   <<< num_query_token: 32
+2026-04-17 17:38:49,608:INFO:   <<< num_thread_reader: 4
+2026-04-17 17:38:49,608:INFO:   <<< output_dir: ckpts/ckpt_msrvtt_caption
+2026-04-17 17:38:49,608:INFO:   <<< qformer_checkpoint: Salesforce/blip2-opt-6.7b-coco
+2026-04-17 17:38:49,608:INFO:   <<< qformer_checkpoint_file: 
+2026-04-17 17:38:49,608:INFO:   <<< qformer_checkpoint_local_files_only: False
+2026-04-17 17:38:49,609:INFO:   <<< qformer_vision_width: 1408
+2026-04-17 17:38:49,609:INFO:   <<< sampled_use_mil: False
+2026-04-17 17:38:49,609:INFO:   <<< scst: True
+2026-04-17 17:38:49,609:INFO:   <<< seed: 42
+2026-04-17 17:38:49,609:INFO:   <<< stage_two: True
+2026-04-17 17:38:49,609:INFO:   <<< t5_model: google/flan-t5-xl
+2026-04-17 17:38:49,609:INFO:   <<< task_type: caption
+2026-04-17 17:38:49,609:INFO:   <<< text_num_hidden_layers: 12
+2026-04-17 17:38:49,609:INFO:   <<< train_csv: data/msrvtt/MSRVTT_train.9k.csv
+2026-04-17 17:38:49,609:INFO:   <<< use_mil: False
+2026-04-17 17:38:49,609:INFO:   <<< val_csv: data/msrvtt/MSRVTT_JSFUSION_test.csv
+2026-04-17 17:38:49,609:INFO:   <<< video_dim: 768
+2026-04-17 17:38:49,609:INFO:   <<< visual_model: visual-base
+2026-04-17 17:38:49,609:INFO:   <<< visual_num_hidden_layers: 6
+2026-04-17 17:38:49,609:INFO:   <<< warmup_proportion: 0.1
+2026-04-17 17:38:49,609:INFO:   <<< world_size: 1
+2026-04-17 17:38:49,609:INFO: device: cuda:0 n_gpu: 1
+2026-04-17 17:38:49,609:INFO: loading vocabulary file /workspace/project/video-captioning/modules/bert-base-uncased/vocab.txt
+2026-04-17 17:38:53,708:INFO: loading archive file /workspace/project/video-captioning/modules/bert-base-uncased
+2026-04-17 17:38:53,709:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-17 17:38:53,709:INFO: loading archive file /workspace/project/video-captioning/modules/visual-base
+2026-04-17 17:38:53,709:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+2026-04-17 17:38:53,709:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/visual-base/visual_pytorch_model.bin
+2026-04-17 17:38:53,709:WARNING: Set visual_config.vocab_size: 768.
+2026-04-17 17:38:53,709:INFO: loading archive file /workspace/project/video-captioning/modules/cross-base
+2026-04-17 17:38:53,709:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+2026-04-17 17:38:53,709:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/cross-base/cross_pytorch_model.bin
+2026-04-17 17:38:53,709:INFO: loading archive file /workspace/project/video-captioning/modules/decoder-base
+2026-04-17 17:38:53,709:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-17 17:38:53,709:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+2026-04-17 17:38:53,710:WARNING: Stage-One:False, Stage-Two:True
+2026-04-17 17:38:53,710:WARNING: Set bert_config.num_hidden_layers: 12.
+2026-04-17 17:38:54,441:WARNING: Set visual_config.num_hidden_layers: 6.
+2026-04-17 17:38:54,680:WARNING: Freeze vision encoder.
+2026-04-17 17:38:54,680:WARNING: Set cross_config.num_hidden_layers: 2.
+2026-04-17 17:38:54,785:WARNING: Add QFormer visual projection: 768 -> 1408.
+2026-04-17 17:38:57,500:INFO: QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+2026-04-17 17:39:09,126:INFO: Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+2026-04-17 17:39:23,873:WARNING: Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj. Skipped 42 other tensors.
+2026-04-17 17:39:29,211:INFO: --------------------
+2026-04-17 17:39:29,211:INFO: Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   similarity_dense.weight
+   similarity_dense.bias
+   normalize_video.visual_norm2d.weight
+   normalize_video.visual_norm2d.bias
+2026-04-17 17:40:38,307:INFO: Effective parameters:
+2026-04-17 17:40:38,307:INFO:   <<< batch_size: 64
+2026-04-17 17:40:38,307:INFO:   <<< batch_size_val: 128
+2026-04-17 17:40:38,307:INFO:   <<< beam_size: 5
+2026-04-17 17:40:38,307:INFO:   <<< bert_model: bert-base-uncased
+2026-04-17 17:40:38,307:INFO:   <<< cache_dir: 
+2026-04-17 17:40:38,307:INFO:   <<< coef_lr: 0.1
+2026-04-17 17:40:38,307:INFO:   <<< cross_model: cross-base
+2026-04-17 17:40:38,307:INFO:   <<< cross_num_hidden_layers: 2
+2026-04-17 17:40:38,307:INFO:   <<< data_path: data/msrvtt/MSRVTT_data.json
+2026-04-17 17:40:38,307:INFO:   <<< datatype: msrvtt
+2026-04-17 17:40:38,307:INFO:   <<< decoder_model: decoder-base
+2026-04-17 17:40:38,307:INFO:   <<< decoder_num_hidden_layers: 3
+2026-04-17 17:40:38,307:INFO:   <<< do_eval: False
+2026-04-17 17:40:38,307:INFO:   <<< do_lower_case: True
+2026-04-17 17:40:38,307:INFO:   <<< do_pretrain: False
+2026-04-17 17:40:38,307:INFO:   <<< do_train: True
+2026-04-17 17:40:38,307:INFO:   <<< epochs: 15
+2026-04-17 17:40:38,307:INFO:   <<< feature_framerate: 1
+2026-04-17 17:40:38,307:INFO:   <<< features_path: /workspace/project/datasets/phihungcrr1701/msrvtt-clip-vitl14-features/versions/1/msrvtt_clip_vitl14_features.pickle
+2026-04-17 17:40:38,307:INFO:   <<< fp16: False
+2026-04-17 17:40:38,307:INFO:   <<< fp16_opt_level: O1
+2026-04-17 17:40:38,307:INFO:   <<< freeze_vit: True
+2026-04-17 17:40:38,307:INFO:   <<< gradient_accumulation_steps: 2
+2026-04-17 17:40:38,307:INFO:   <<< hard_negative_rate: 0.5
+2026-04-17 17:40:38,307:INFO:   <<< init_model: /workspace/project/datasets/trnphmngcminh/cider-58-scst-loss-v1/versions/1/pytorch_model.bin.best.0
+2026-04-17 17:40:38,307:INFO:   <<< local_rank: 0
+2026-04-17 17:40:38,307:INFO:   <<< lora: True
+2026-04-17 17:40:38,307:INFO:   <<< lora_alpha: 64
+2026-04-17 17:40:38,307:INFO:   <<< lora_dropout: 0.05
+2026-04-17 17:40:38,307:INFO:   <<< lora_r: 32
+2026-04-17 17:40:38,308:INFO:   <<< lr: 5e-06
+2026-04-17 17:40:38,308:INFO:   <<< lr_decay: 0.9
+2026-04-17 17:40:38,308:INFO:   <<< lr_lora: 3e-06
+2026-04-17 17:40:38,308:INFO:   <<< lr_qformer: 5e-06
+2026-04-17 17:40:38,308:INFO:   <<< margin: 0.1
+2026-04-17 17:40:38,308:INFO:   <<< max_frames: 48
+2026-04-17 17:40:38,308:INFO:   <<< max_txt_len: 20
+2026-04-17 17:40:38,308:INFO:   <<< max_words: 48
+2026-04-17 17:40:38,308:INFO:   <<< min_time: 5.0
+2026-04-17 17:40:38,308:INFO:   <<< n_display: 50
+2026-04-17 17:40:38,308:INFO:   <<< n_gpu: 1
+2026-04-17 17:40:38,308:INFO:   <<< n_pair: 1
+2026-04-17 17:40:38,308:INFO:   <<< negative_weighting: 1
+2026-04-17 17:40:38,308:INFO:   <<< num_query_token: 32
+2026-04-17 17:40:38,308:INFO:   <<< num_thread_reader: 4
+2026-04-17 17:40:38,308:INFO:   <<< output_dir: ckpts/ckpt_msrvtt_caption
+2026-04-17 17:40:38,308:INFO:   <<< qformer_checkpoint: Salesforce/blip2-opt-6.7b-coco
+2026-04-17 17:40:38,308:INFO:   <<< qformer_checkpoint_file: 
+2026-04-17 17:40:38,308:INFO:   <<< qformer_checkpoint_local_files_only: False
+2026-04-17 17:40:38,308:INFO:   <<< qformer_vision_width: 1408
+2026-04-17 17:40:38,308:INFO:   <<< sampled_use_mil: False
+2026-04-17 17:40:38,308:INFO:   <<< scst: True
+2026-04-17 17:40:38,308:INFO:   <<< seed: 42
+2026-04-17 17:40:38,308:INFO:   <<< stage_two: True
+2026-04-17 17:40:38,308:INFO:   <<< t5_model: google/flan-t5-xl
+2026-04-17 17:40:38,308:INFO:   <<< task_type: caption
+2026-04-17 17:40:38,308:INFO:   <<< text_num_hidden_layers: 12
+2026-04-17 17:40:38,308:INFO:   <<< train_csv: data/msrvtt/MSRVTT_train.9k.csv
+2026-04-17 17:40:38,308:INFO:   <<< use_mil: False
+2026-04-17 17:40:38,308:INFO:   <<< val_csv: data/msrvtt/MSRVTT_JSFUSION_test.csv
+2026-04-17 17:40:38,308:INFO:   <<< video_dim: 768
+2026-04-17 17:40:38,308:INFO:   <<< visual_model: visual-base
+2026-04-17 17:40:38,308:INFO:   <<< visual_num_hidden_layers: 6
+2026-04-17 17:40:38,308:INFO:   <<< warmup_proportion: 0.1
+2026-04-17 17:40:38,308:INFO:   <<< world_size: 1
+2026-04-17 17:40:38,308:INFO: device: cuda:0 n_gpu: 1
+2026-04-17 17:40:38,308:INFO: loading vocabulary file /workspace/project/video-captioning/modules/bert-base-uncased/vocab.txt
+2026-04-17 17:40:42,465:INFO: loading archive file /workspace/project/video-captioning/modules/bert-base-uncased
+2026-04-17 17:40:42,466:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-17 17:40:42,466:INFO: loading archive file /workspace/project/video-captioning/modules/visual-base
+2026-04-17 17:40:42,466:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+2026-04-17 17:40:42,466:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/visual-base/visual_pytorch_model.bin
+2026-04-17 17:40:42,466:WARNING: Set visual_config.vocab_size: 768.
+2026-04-17 17:40:42,466:INFO: loading archive file /workspace/project/video-captioning/modules/cross-base
+2026-04-17 17:40:42,467:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+2026-04-17 17:40:42,467:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/cross-base/cross_pytorch_model.bin
+2026-04-17 17:40:42,467:INFO: loading archive file /workspace/project/video-captioning/modules/decoder-base
+2026-04-17 17:40:42,467:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-04-17 17:40:42,467:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+2026-04-17 17:40:42,467:WARNING: Stage-One:False, Stage-Two:True
+2026-04-17 17:40:42,467:WARNING: Set bert_config.num_hidden_layers: 12.
+2026-04-17 17:40:43,338:WARNING: Set visual_config.num_hidden_layers: 6.
+2026-04-17 17:40:43,595:WARNING: Freeze vision encoder.
+2026-04-17 17:40:43,595:WARNING: Set cross_config.num_hidden_layers: 2.
+2026-04-17 17:40:43,707:WARNING: Add QFormer visual projection: 768 -> 1408.
+2026-04-17 17:40:44,387:INFO: QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+2026-04-17 17:40:44,616:INFO: Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+2026-04-17 17:40:49,967:WARNING: Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj. Skipped 42 other tensors.
+2026-04-17 17:40:57,028:INFO: --------------------
+2026-04-17 17:40:57,028:INFO: Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   similarity_dense.weight
+   similarity_dense.bias
+   normalize_video.visual_norm2d.weight
+   normalize_video.visual_norm2d.bias
+2026-04-17 17:40:58,878:INFO: Using pycocoevalcap for evaluation metrics
+2026-04-17 17:41:03,056:INFO: ***** Running test *****
+2026-04-17 17:41:03,056:INFO:   Num examples = 2990
+2026-04-17 17:41:03,056:INFO:   Batch size = 128
+2026-04-17 17:41:03,056:INFO:   Num steps = 24
+2026-04-17 17:41:13,789:INFO: CorpusCider: pre-computed IDF from 6513 videos, 130260 total refs, 1203418 unique n-grams
+2026-04-17 17:41:13,967:INFO: ***** Running training *****
+2026-04-17 17:41:13,968:INFO:   Num examples = 130260
+2026-04-17 17:41:13,968:INFO:   Batch size = 64
+2026-04-17 17:41:13,968:INFO:   Num steps = 30540
+2026-04-17 17:44:34,365:INFO: Epoch: 1/15, Step: 100/2035, Lr: 0.000000, Loss: -0.137016, Time/step: 2.003851
+2026-04-17 17:47:51,146:INFO: Epoch: 1/15, Step: 200/2035, Lr: 0.000000, Loss: -0.107679, Time/step: 1.967808
+2026-04-17 17:51:09,309:INFO: Epoch: 1/15, Step: 300/2035, Lr: 0.000000, Loss: -0.097283, Time/step: 1.981625
+2026-04-17 17:54:34,227:INFO: Epoch: 1/15, Step: 400/2035, Lr: 0.000000, Loss: -0.111313, Time/step: 2.049170
+2026-04-17 17:57:53,468:INFO: Epoch: 1/15, Step: 500/2035, Lr: 0.000000, Loss: -0.090398, Time/step: 1.992411
+2026-04-17 18:01:10,535:INFO: Epoch: 1/15, Step: 600/2035, Lr: 0.000001, Loss: -0.094989, Time/step: 1.970660
+2026-04-17 18:04:28,654:INFO: Epoch: 1/15, Step: 700/2035, Lr: 0.000001, Loss: -0.052533, Time/step: 1.981191
+2026-04-17 18:07:46,786:INFO: Epoch: 1/15, Step: 800/2035, Lr: 0.000001, Loss: -0.109462, Time/step: 1.981316
+2026-04-17 18:11:04,259:INFO: Epoch: 1/15, Step: 900/2035, Lr: 0.000001, Loss: -0.115120, Time/step: 1.974728
+2026-04-17 18:14:22,392:INFO: Epoch: 1/15, Step: 1000/2035, Lr: 0.000001, Loss: -0.087925, Time/step: 1.981318
+2026-04-17 18:17:45,421:INFO: Epoch: 1/15, Step: 1100/2035, Lr: 0.000001, Loss: -0.039753, Time/step: 2.030293
+2026-04-17 18:21:08,563:INFO: Epoch: 1/15, Step: 1200/2035, Lr: 0.000001, Loss: -0.115950, Time/step: 2.031413
+2026-04-17 18:24:26,406:INFO: Epoch: 1/15, Step: 1300/2035, Lr: 0.000001, Loss: -0.126074, Time/step: 1.978422
+2026-04-17 18:27:44,649:INFO: Epoch: 1/15, Step: 1400/2035, Lr: 0.000001, Loss: -0.108189, Time/step: 1.982430
+2026-04-17 18:31:03,248:INFO: Epoch: 1/15, Step: 1500/2035, Lr: 0.000001, Loss: -0.154841, Time/step: 1.985988
+2026-04-17 18:34:24,999:INFO: Epoch: 1/15, Step: 1600/2035, Lr: 0.000002, Loss: -0.132848, Time/step: 2.017504
+2026-04-17 18:37:44,512:INFO: Epoch: 1/15, Step: 1700/2035, Lr: 0.000002, Loss: -0.031003, Time/step: 1.995120
+2026-04-17 18:41:02,745:INFO: Epoch: 1/15, Step: 1800/2035, Lr: 0.000002, Loss: -0.135293, Time/step: 1.982334
+2026-04-17 18:44:21,654:INFO: Epoch: 1/15, Step: 1900/2035, Lr: 0.000002, Loss: -0.111866, Time/step: 1.989082
+2026-04-17 18:47:39,725:INFO: Epoch: 1/15, Step: 2000/2035, Lr: 0.000002, Loss: -0.070764, Time/step: 1.980706
+2026-04-17 18:48:49,459:INFO: Epoch 1/15 Finished, Train Loss: -0.100841
+2026-04-17 18:48:53,932:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-17 18:49:22,499:INFO:   Average Validation Loss: 8.7887
+2026-04-17 18:49:35,140:INFO: >>>  BLEU_1: 0.8407, BLEU_2: 0.6940, BLEU_3: 0.5447, BLEU_4: 0.4145
+2026-04-17 18:49:35,140:INFO: >>>  METEOR: 0.3017, ROUGE_L: 0.6317, CIDEr: 0.5815
+2026-04-17 18:49:39,551:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-04-17 18:49:39,552:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5815, BLEU_4: 0.4145
+2026-04-17 18:51:51,722:INFO: Epoch: 2/15, Step: 66/2035, Lr: 0.000002, Loss: -0.123632, Time/step: 1.320203
+2026-04-17 18:55:12,035:INFO: Epoch: 2/15, Step: 166/2035, Lr: 0.000002, Loss: -0.087371, Time/step: 2.003129
+2026-04-17 18:58:30,595:INFO: Epoch: 2/15, Step: 266/2035, Lr: 0.000002, Loss: -0.143349, Time/step: 1.985600
+2026-04-17 19:01:49,291:INFO: Epoch: 2/15, Step: 366/2035, Lr: 0.000002, Loss: -0.137961, Time/step: 1.986957
+2026-04-17 19:05:07,504:INFO: Epoch: 2/15, Step: 466/2035, Lr: 0.000002, Loss: -0.081389, Time/step: 1.982119
+2026-04-17 19:08:32,600:INFO: Epoch: 2/15, Step: 566/2035, Lr: 0.000003, Loss: -0.083795, Time/step: 2.050965
+2026-04-17 19:11:51,157:INFO: Epoch: 2/15, Step: 666/2035, Lr: 0.000003, Loss: -0.081597, Time/step: 1.985557
+2026-04-17 19:15:12,483:INFO: Epoch: 2/15, Step: 766/2035, Lr: 0.000003, Loss: -0.089672, Time/step: 2.013262
+2026-04-17 19:18:35,272:INFO: Epoch: 2/15, Step: 866/2035, Lr: 0.000003, Loss: -0.097174, Time/step: 2.027879
+2026-04-17 19:21:54,709:INFO: Epoch: 2/15, Step: 966/2035, Lr: 0.000003, Loss: -0.098431, Time/step: 1.994365
+2026-04-17 19:25:15,769:INFO: Epoch: 2/15, Step: 1066/2035, Lr: 0.000003, Loss: -0.106982, Time/step: 2.010603
+2026-04-17 19:28:47,967:INFO: Epoch: 2/15, Step: 1166/2035, Lr: 0.000003, Loss: -0.104082, Time/step: 2.121971
+2026-04-17 19:32:14,502:INFO: Epoch: 2/15, Step: 1266/2035, Lr: 0.000003, Loss: -0.134846, Time/step: 2.065345
+2026-04-17 19:35:33,842:INFO: Epoch: 2/15, Step: 1366/2035, Lr: 0.000003, Loss: -0.155320, Time/step: 1.993398
+2026-04-17 19:38:57,352:INFO: Epoch: 2/15, Step: 1466/2035, Lr: 0.000003, Loss: -0.124556, Time/step: 2.035099
+2026-04-17 19:42:23,631:INFO: Epoch: 2/15, Step: 1566/2035, Lr: 0.000003, Loss: -0.092248, Time/step: 2.062784
+2026-04-17 19:45:43,396:INFO: Epoch: 2/15, Step: 1666/2035, Lr: 0.000003, Loss: -0.089864, Time/step: 1.997640
+2026-04-17 19:49:04,179:INFO: Epoch: 2/15, Step: 1766/2035, Lr: 0.000003, Loss: -0.080335, Time/step: 2.007828
+2026-04-17 19:52:32,759:INFO: Epoch: 2/15, Step: 1866/2035, Lr: 0.000003, Loss: -0.111158, Time/step: 2.085795
+2026-04-17 19:56:15,580:INFO: Epoch: 2/15, Step: 1966/2035, Lr: 0.000003, Loss: -0.074983, Time/step: 2.228203
+2026-04-17 19:58:44,436:INFO: Epoch 2/15 Finished, Train Loss: -0.101638
+2026-04-17 19:58:52,571:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-17 19:59:24,722:INFO:   Average Validation Loss: 9.2301
+2026-04-17 19:59:38,716:INFO: >>>  BLEU_1: 0.8409, BLEU_2: 0.6941, BLEU_3: 0.5449, BLEU_4: 0.4145
+2026-04-17 19:59:38,716:INFO: >>>  METEOR: 0.3021, ROUGE_L: 0.6318, CIDEr: 0.5826
+2026-04-17 19:59:46,413:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-04-17 19:59:46,413:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5826, BLEU_4: 0.4145
+2026-04-17 20:00:55,533:INFO: Epoch: 3/15, Step: 32/2035, Lr: 0.000003, Loss: -0.095079, Time/step: 0.689572
+2026-04-17 20:04:17,698:INFO: Epoch: 3/15, Step: 132/2035, Lr: 0.000003, Loss: -0.151630, Time/step: 2.021645
+2026-04-17 20:07:38,114:INFO: Epoch: 3/15, Step: 232/2035, Lr: 0.000003, Loss: -0.109029, Time/step: 2.004149
+2026-04-17 20:11:03,251:INFO: Epoch: 3/15, Step: 332/2035, Lr: 0.000003, Loss: -0.110624, Time/step: 2.051367
+2026-04-17 20:14:28,925:INFO: Epoch: 3/15, Step: 432/2035, Lr: 0.000003, Loss: -0.066187, Time/step: 2.056731
+2026-04-17 20:17:53,047:INFO: Epoch: 3/15, Step: 532/2035, Lr: 0.000003, Loss: -0.118495, Time/step: 2.041220
+2026-04-17 20:21:13,500:INFO: Epoch: 3/15, Step: 632/2035, Lr: 0.000003, Loss: -0.128170, Time/step: 2.004529
+2026-04-17 20:24:31,855:INFO: Epoch: 3/15, Step: 732/2035, Lr: 0.000003, Loss: -0.084368, Time/step: 1.983541
+2026-04-17 20:27:51,171:INFO: Epoch: 3/15, Step: 832/2035, Lr: 0.000003, Loss: -0.137665, Time/step: 1.993160
+2026-04-17 20:31:10,301:INFO: Epoch: 3/15, Step: 932/2035, Lr: 0.000003, Loss: -0.077094, Time/step: 1.991297
+2026-04-17 20:34:31,985:INFO: Epoch: 3/15, Step: 1032/2035, Lr: 0.000003, Loss: -0.123707, Time/step: 2.016832
+2026-04-17 20:37:53,624:INFO: Epoch: 3/15, Step: 1132/2035, Lr: 0.000003, Loss: -0.158959, Time/step: 2.016384
+2026-04-17 20:41:18,376:INFO: Epoch: 3/15, Step: 1232/2035, Lr: 0.000003, Loss: -0.106266, Time/step: 2.047513
+2026-04-17 20:44:38,281:INFO: Epoch: 3/15, Step: 1332/2035, Lr: 0.000003, Loss: -0.086190, Time/step: 1.999047
+2026-04-17 20:47:57,625:INFO: Epoch: 3/15, Step: 1432/2035, Lr: 0.000003, Loss: -0.084908, Time/step: 1.993431
+2026-04-17 20:51:16,050:INFO: Epoch: 3/15, Step: 1532/2035, Lr: 0.000003, Loss: -0.094398, Time/step: 1.984250
+2026-04-17 20:54:38,422:INFO: Epoch: 3/15, Step: 1632/2035, Lr: 0.000003, Loss: -0.189714, Time/step: 2.023709
+2026-04-17 20:57:58,766:INFO: Epoch: 3/15, Step: 1732/2035, Lr: 0.000003, Loss: -0.139244, Time/step: 2.003440
+2026-04-17 21:01:20,685:INFO: Epoch: 3/15, Step: 1832/2035, Lr: 0.000003, Loss: -0.121004, Time/step: 2.019189
+2026-04-17 21:04:45,518:INFO: Epoch: 3/15, Step: 1932/2035, Lr: 0.000003, Loss: -0.118542, Time/step: 2.048327
+2026-04-17 21:08:15,177:INFO: Epoch: 3/15, Step: 2032/2035, Lr: 0.000003, Loss: -0.052236, Time/step: 2.096582
+2026-04-17 21:08:22,051:INFO: Epoch 3/15 Finished, Train Loss: -0.103655
+2026-04-17 21:08:29,835:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-17 21:08:59,719:INFO:   Average Validation Loss: 9.3282
+2026-04-17 21:09:13,012:INFO: >>>  BLEU_1: 0.8424, BLEU_2: 0.6948, BLEU_3: 0.5449, BLEU_4: 0.4141
+2026-04-17 21:09:13,013:INFO: >>>  METEOR: 0.3018, ROUGE_L: 0.6312, CIDEr: 0.5823
+2026-04-17 21:09:13,028:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5826, BLEU_4: 0.4145
+2026-04-17 21:12:37,165:INFO: Epoch: 4/15, Step: 98/2035, Lr: 0.000003, Loss: -0.089792, Time/step: 2.039668
+2026-04-17 21:15:58,180:INFO: Epoch: 4/15, Step: 198/2035, Lr: 0.000003, Loss: -0.105377, Time/step: 2.010143
+2026-04-17 21:19:16,730:INFO: Epoch: 4/15, Step: 298/2035, Lr: 0.000003, Loss: -0.122737, Time/step: 1.985500
+2026-04-17 21:22:35,394:INFO: Epoch: 4/15, Step: 398/2035, Lr: 0.000003, Loss: -0.162562, Time/step: 1.986638
+2026-04-17 21:25:55,545:INFO: Epoch: 4/15, Step: 498/2035, Lr: 0.000003, Loss: -0.089491, Time/step: 2.001505
+2026-04-17 21:29:14,675:INFO: Epoch: 4/15, Step: 598/2035, Lr: 0.000003, Loss: -0.078835, Time/step: 1.991294
+2026-04-17 21:32:33,893:INFO: Epoch: 4/15, Step: 698/2035, Lr: 0.000003, Loss: -0.109732, Time/step: 1.992180
+2026-04-17 21:35:53,492:INFO: Epoch: 4/15, Step: 798/2035, Lr: 0.000003, Loss: -0.078539, Time/step: 1.995979
+2026-04-17 21:39:13,222:INFO: Epoch: 4/15, Step: 898/2035, Lr: 0.000003, Loss: -0.140072, Time/step: 1.997299
+2026-04-17 21:42:36,330:INFO: Epoch: 4/15, Step: 998/2035, Lr: 0.000003, Loss: -0.078145, Time/step: 2.031075
+2026-04-17 21:45:59,630:INFO: Epoch: 4/15, Step: 1098/2035, Lr: 0.000003, Loss: -0.139438, Time/step: 2.032995
+2026-04-17 21:49:21,110:INFO: Epoch: 4/15, Step: 1198/2035, Lr: 0.000003, Loss: -0.082523, Time/step: 2.014794
+2026-04-17 21:52:39,774:INFO: Epoch: 4/15, Step: 1298/2035, Lr: 0.000003, Loss: -0.132431, Time/step: 1.986637
+2026-04-17 21:55:59,495:INFO: Epoch: 4/15, Step: 1398/2035, Lr: 0.000003, Loss: -0.061900, Time/step: 1.997209
+2026-04-17 21:59:20,499:INFO: Epoch: 4/15, Step: 1498/2035, Lr: 0.000003, Loss: -0.115938, Time/step: 2.010040
+2026-04-17 22:02:39,475:INFO: Epoch: 4/15, Step: 1598/2035, Lr: 0.000003, Loss: -0.116233, Time/step: 1.989750
+2026-04-17 22:05:57,955:INFO: Epoch: 4/15, Step: 1698/2035, Lr: 0.000003, Loss: -0.135996, Time/step: 1.984799
+2026-04-17 22:09:16,614:INFO: Epoch: 4/15, Step: 1798/2035, Lr: 0.000003, Loss: -0.080641, Time/step: 1.986586
+2026-04-17 22:12:34,524:INFO: Epoch: 4/15, Step: 1898/2035, Lr: 0.000003, Loss: -0.035471, Time/step: 1.979093
+2026-04-17 22:15:56,415:INFO: Epoch: 4/15, Step: 1998/2035, Lr: 0.000003, Loss: -0.141839, Time/step: 2.018905
+2026-04-17 22:17:09,299:INFO: Epoch 4/15 Finished, Train Loss: -0.103757
+2026-04-17 22:17:16,589:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-17 22:17:45,110:INFO:   Average Validation Loss: 9.3912
+2026-04-17 22:17:58,098:INFO: >>>  BLEU_1: 0.8425, BLEU_2: 0.6941, BLEU_3: 0.5442, BLEU_4: 0.4134
+2026-04-17 22:17:58,098:INFO: >>>  METEOR: 0.3020, ROUGE_L: 0.6308, CIDEr: 0.5813
+2026-04-17 22:17:58,112:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5826, BLEU_4: 0.4145
+2026-04-17 22:20:06,069:INFO: Epoch: 5/15, Step: 64/2035, Lr: 0.000003, Loss: -0.131655, Time/step: 1.278104
+2026-04-17 22:23:23,523:INFO: Epoch: 5/15, Step: 164/2035, Lr: 0.000003, Loss: -0.099736, Time/step: 1.974538
+2026-04-17 22:26:41,930:INFO: Epoch: 5/15, Step: 264/2035, Lr: 0.000003, Loss: -0.136165, Time/step: 1.984066
+2026-04-17 22:30:01,676:INFO: Epoch: 5/15, Step: 364/2035, Lr: 0.000003, Loss: -0.099144, Time/step: 1.997461
+2026-04-17 22:33:20,740:INFO: Epoch: 5/15, Step: 464/2035, Lr: 0.000003, Loss: -0.146853, Time/step: 1.990629
+2026-04-17 22:36:41,249:INFO: Epoch: 5/15, Step: 564/2035, Lr: 0.000003, Loss: -0.075615, Time/step: 2.005093
+2026-04-17 22:39:59,239:INFO: Epoch: 5/15, Step: 664/2035, Lr: 0.000003, Loss: -0.096210, Time/step: 1.979897
+2026-04-17 22:43:18,173:INFO: Epoch: 5/15, Step: 764/2035, Lr: 0.000003, Loss: -0.116103, Time/step: 1.989333
+2026-04-17 22:46:40,573:INFO: Epoch: 5/15, Step: 864/2035, Lr: 0.000003, Loss: -0.122728, Time/step: 2.024000
+2026-04-17 22:49:59,873:INFO: Epoch: 5/15, Step: 964/2035, Lr: 0.000003, Loss: -0.133293, Time/step: 1.992989
+2026-04-17 22:53:19,218:INFO: Epoch: 5/15, Step: 1064/2035, Lr: 0.000003, Loss: -0.124233, Time/step: 1.993452
+2026-04-17 22:56:41,142:INFO: Epoch: 5/15, Step: 1164/2035, Lr: 0.000003, Loss: -0.079343, Time/step: 2.019229
+2026-04-17 23:00:06,805:INFO: Epoch: 5/15, Step: 1264/2035, Lr: 0.000003, Loss: -0.138532, Time/step: 2.056632
+2026-04-17 23:03:25,059:INFO: Epoch: 5/15, Step: 1364/2035, Lr: 0.000003, Loss: -0.052260, Time/step: 1.982535
+2026-04-17 23:06:44,297:INFO: Epoch: 5/15, Step: 1464/2035, Lr: 0.000003, Loss: -0.097127, Time/step: 1.992372
+2026-04-17 23:10:04,581:INFO: Epoch: 5/15, Step: 1564/2035, Lr: 0.000003, Loss: -0.109944, Time/step: 2.002836
+2026-04-17 23:13:25,480:INFO: Epoch: 5/15, Step: 1664/2035, Lr: 0.000003, Loss: -0.101454, Time/step: 2.008987
+2026-04-17 23:16:44,369:INFO: Epoch: 5/15, Step: 1764/2035, Lr: 0.000003, Loss: -0.123108, Time/step: 1.988889
+2026-04-17 23:20:02,313:INFO: Epoch: 5/15, Step: 1864/2035, Lr: 0.000003, Loss: -0.097164, Time/step: 1.979429
+2026-04-17 23:23:19,870:INFO: Epoch: 5/15, Step: 1964/2035, Lr: 0.000003, Loss: -0.126331, Time/step: 1.975565
+2026-04-17 23:25:40,334:INFO: Epoch 5/15 Finished, Train Loss: -0.103264
+2026-04-17 23:25:47,688:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-04-17 23:26:16,199:INFO:   Average Validation Loss: 9.3773
+2026-04-17 23:26:28,557:INFO: >>>  BLEU_1: 0.8419, BLEU_2: 0.6935, BLEU_3: 0.5434, BLEU_4: 0.4121
+2026-04-17 23:26:28,557:INFO: >>>  METEOR: 0.3020, ROUGE_L: 0.6306, CIDEr: 0.5805
+2026-04-17 23:26:28,572:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.5826, BLEU_4: 0.4145
+2026-04-17 23:27:29,413:INFO: Epoch: 6/15, Step: 30/2035, Lr: 0.000003, Loss: -0.106075, Time/step: 0.606961
+2026-04-17 23:30:48,846:INFO: Epoch: 6/15, Step: 130/2035, Lr: 0.000003, Loss: -0.103913, Time/step: 1.994322
+2026-04-17 23:34:06,367:INFO: Epoch: 6/15, Step: 230/2035, Lr: 0.000003, Loss: -0.066525, Time/step: 1.975201
+2026-04-17 23:37:24,926:INFO: Epoch: 6/15, Step: 330/2035, Lr: 0.000003, Loss: -0.115566, Time/step: 1.985591
+2026-04-17 23:40:43,726:INFO: Epoch: 6/15, Step: 430/2035, Lr: 0.000003, Loss: -0.115781, Time/step: 1.987994
+2026-04-17 23:44:00,220:INFO: Epoch: 6/15, Step: 530/2035, Lr: 0.000003, Loss: -0.168021, Time/step: 1.964935
+2026-04-17 23:47:21,009:INFO: Epoch: 6/15, Step: 630/2035, Lr: 0.000003, Loss: -0.090979, Time/step: 2.007893

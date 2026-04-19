@@ -13,7 +13,6 @@ from modules.tokenization import BertTokenizer
 from utils.setup_utils import set_seed_logger, init_device
 from utils.model_utils import init_model, save_model, load_model
 from utils.optimizer_utils import prep_optimizer
-from utils.cider_utils import CorpusCider
 from data.dataloader_factory import DATALOADER_DICT
 from trainers.trainer import train_epoch
 from inference.caption_generator import eval_epoch
@@ -96,7 +95,12 @@ def get_args(description='UniVL on Caption Task'):
 
     parser.add_argument('--freeze_vit', action='store_true', help="Freeze vision encoder parameters.")
     parser.add_argument('--scst', action='store_true', help="Enable SCST training for caption loss.")
-    parser.add_argument('--beam_size', type=int, default=5, help="Beam size for SCST decoding.")
+    parser.add_argument('--eval_beam_size', type=int, default=None,
+                        help="Beam size used for deterministic caption generation during eval/test.")
+    parser.add_argument('--scst_num_samples', type=int, default=None,
+                        help="Number of sampled captions per video for SCST training.")
+    parser.add_argument('--beam_size', type=int, default=None,
+                        help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
     parser.add_argument('--t5_model', type=str, default='google/flan-t5-xl', help="T5 model name.")
     parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum text length for T5 tokenizer.")
     parser.add_argument('--num_query_token', type=int, default=32, help="Number of Qformer query tokens.")
@@ -126,6 +130,13 @@ def get_args(description='UniVL on Caption Task'):
         raise ValueError("At least one of `do_train` or `do_eval` must be True.")
 
     args.batch_size = int(args.batch_size / args.gradient_accumulation_steps)
+    if args.eval_beam_size is None:
+        args.eval_beam_size = args.beam_size if args.beam_size is not None else 5
+    if args.scst_num_samples is None:
+        args.scst_num_samples = args.beam_size if args.beam_size is not None else 10
+    # Keep the old attribute for backwards compatibility with older scripts/utilities.
+    if args.beam_size is None:
+        args.beam_size = args.eval_beam_size
 
     return args
 
@@ -170,12 +181,6 @@ def main():
             coef_lr = 1.0
         optimizer, scheduler, model = prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, args.local_rank, coef_lr=coef_lr)
 
-        # P1: Pre-compute corpus-level IDF for SCST CIDEr reward
-        if args.scst and hasattr(train_dataloader.dataset, 'video_sentences_dict'):
-            model_inner = model.module if hasattr(model, 'module') else model
-            corpus_cider = CorpusCider()
-            corpus_cider.init_corpus_df(train_dataloader.dataset.video_sentences_dict)
-            model_inner._cider_scorer = corpus_cider
 
         if args.local_rank == 0:
             logger.info("***** Running training *****")

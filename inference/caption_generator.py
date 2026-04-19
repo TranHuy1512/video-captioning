@@ -56,10 +56,10 @@ def eval_epoch(
 
             video_mask = video_mask.view(-1, video_mask.shape[-1])
 
-            beam_size = max(1, getattr(model, "beam_size", 1))
+            eval_beam_size = max(1, getattr(model, "eval_beam_size", getattr(model, "beam_size", 1)))
             max_length = getattr(model, "max_txt_len", args.max_words)
             generated_ids = model.generate_caption_ids(
-                visual_output, video_mask, num_beams=beam_size, max_length=max_length
+                visual_output, video_mask, num_beams=eval_beam_size, max_length=max_length
             )
             all_result_lists.extend(model.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True))
 
