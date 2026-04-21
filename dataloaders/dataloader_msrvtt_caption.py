@@ -198,11 +198,16 @@ class MSRVTT_Caption_DataLoader(Dataset):
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, choice_video_ids, \
                pairs_t5_output_caption_ids
 
+    # def _get_single_text(self, video_id):
+    #     rind = random.randint(0, len(self.sentences[video_id]) - 1)
+    #     caption = self.sentences[video_id][rind]
+    #     words = self.tokenizer.tokenize(caption)
+    #     return words
     def _get_single_text(self, video_id):
-        rind = random.randint(0, len(self.sentences[video_id]) - 1)
-        caption = self.sentences[video_id][rind]
-        words = self.tokenizer.tokenize(caption)
-        return words
+        captions = self.video_sentences_dict[video_id]
+        rind = random.randint(0, len(captions) - 1)
+        caption = captions[rind]
+        return self.tokenizer.tokenize(caption)
 
     def _get_video(self, choice_video_ids):
         video_mask = np.zeros((len(choice_video_ids), self.max_frames), dtype=np.int64)

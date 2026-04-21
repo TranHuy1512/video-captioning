@@ -630,7 +630,11 @@ class UniVL(UniVLPreTrainedModel):
                 visual_output, video_mask
             )
             if self.training and getattr(self, "scst", False):
-                return self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
+                xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+                scst_loss = self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
+                alpha = getattr(self.task_config, "scst_alpha", 0.7)
+                return alpha * xe_loss + (1 - alpha) * scst_loss
+                # return self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
             return self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
 
 
@@ -643,31 +647,34 @@ class UniVL(UniVLPreTrainedModel):
     def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
         batch_size = output_caption_ids.size(0)
         pad_token_id = self.t5_tokenizer.pad_token_id
+        scst_min_length = getattr(self.task_config, "scst_min_length", 3)
+
+        # Keep hard decode constraints identical between sampled and baseline
+        # paths to reduce artificial variance in the SCST advantage signal.
+        common_generate_kwargs = dict(
+            inputs_embeds=inputs_embeds,
+            attention_mask=encoder_atts,
+            num_beams=1,
+            max_length=self.max_txt_len,
+            min_length=scst_min_length,
+            repetition_penalty=1.2,
+        )
 
         # ── 1. Sample sequences and eval-style baseline (no grad) ──
         with torch.no_grad():
             outputs = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
+                **common_generate_kwargs,
                 do_sample=True,
                 top_p=0.9,
                 temperature=0.8,
-                num_beams=1,
-                max_length=self.max_txt_len,
-                min_length=3,
-                repetition_penalty=1.2,
                 num_return_sequences=self.scst_num_samples,
                 return_dict_in_generate=True,
             )
             generated_ids = outputs.sequences  # (B*scst_num_samples, L)
 
             baseline_ids = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
+                **common_generate_kwargs,
                 do_sample=False,
-                num_beams=max(1, self.eval_beam_size),
-                max_length=self.max_txt_len,
-                repetition_penalty=1.2,
                 length_penalty=1.0,
             )
 
