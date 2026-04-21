@@ -119,6 +119,7 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             "qformer_visual_proj.",
             "t5_model.",
             "t5_proj.",
+            "normalize_video.",
         )
         filtered_state_dict = state_dict.__class__(
             (key, value) for key, value in state_dict.items()
