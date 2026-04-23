@@ -22,6 +22,7 @@ from __future__ import print_function
 import logging
 import numpy as np
 import itertools
+import re
 
 import torch
 from torch import nn
@@ -111,6 +112,9 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
     @staticmethod
     def _filter_init_model_state_dict(state_dict, task_config=None):
+        state_dict = UniVLPreTrainedModel._normalize_t5_checkpoint_state_dict(
+            state_dict, task_config=task_config
+        )
         allowed_prefixes = (
             "bert.",
             "visual.",
@@ -137,6 +141,107 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             )
         )
         return filtered_state_dict
+
+    @staticmethod
+    def _normalize_t5_checkpoint_state_dict(state_dict, task_config=None):
+        has_lora_t5_keys = any(
+            key.startswith("t5_model.base_model.model.") for key in state_dict.keys()
+        )
+        target_uses_lora = bool(getattr(task_config, "lora", False)) if task_config is not None else False
+
+        if not has_lora_t5_keys and not target_uses_lora:
+            return state_dict
+
+        state_dict_cls = state_dict.__class__
+        normalized_state = state_dict_cls()
+        metadata = getattr(state_dict, "_metadata", None)
+        if metadata is not None:
+            normalized_state._metadata = metadata
+
+        converted_key_count = 0
+        merged_lora_count = 0
+        dropped_lora_tensor_count = 0
+
+        attention_weight_pattern = re.compile(r"(\.(?:q|k|v|o))\.(weight|bias)$")
+
+        def base_to_peft_key(key):
+            if not key.startswith("t5_model."):
+                return key
+
+            suffix = key[len("t5_model."):]
+            new_key = "t5_model.base_model.model." + suffix
+            return attention_weight_pattern.sub(r"\1.base_layer.\2", new_key)
+
+        if has_lora_t5_keys and not target_uses_lora:
+            lora_a_tensors = {}
+            lora_b_tensors = {}
+
+            for key, value in state_dict.items():
+                new_key = key
+                if key.startswith("t5_model.base_model.model."):
+                    new_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
+                    if ".base_layer." in new_key:
+                        new_key = new_key.replace(".base_layer.", ".")
+                    converted_key_count += int(new_key != key)
+
+                if ".lora_A." in key:
+                    base_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
+                    base_key = base_key.split(".lora_A.", 1)[0] + ".weight"
+                    lora_a_tensors[base_key] = value
+                    dropped_lora_tensor_count += 1
+                    continue
+
+                if ".lora_B." in key:
+                    base_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
+                    base_key = base_key.split(".lora_B.", 1)[0] + ".weight"
+                    lora_b_tensors[base_key] = value
+                    dropped_lora_tensor_count += 1
+                    continue
+
+                normalized_state[new_key] = value
+
+            scaling = 1.0
+            if task_config is not None:
+                lora_r = getattr(task_config, "lora_r", 0)
+                lora_alpha = getattr(task_config, "lora_alpha", 0)
+                if lora_r:
+                    scaling = float(lora_alpha) / float(lora_r)
+
+            for base_key, a_weight in lora_a_tensors.items():
+                b_weight = lora_b_tensors.get(base_key)
+                if b_weight is None or base_key not in normalized_state:
+                    continue
+
+                base_weight = normalized_state[base_key]
+                delta = torch.matmul(b_weight.float(), a_weight.float()) * scaling
+                normalized_state[base_key] = base_weight + delta.to(
+                    device=base_weight.device, dtype=base_weight.dtype
+                )
+                merged_lora_count += 1
+
+            show_log(
+                task_config,
+                "Normalized LoRA T5 checkpoint for non-LoRA load: converted {} keys, merged {} LoRA updates, dropped {} adapter tensors.".format(
+                    converted_key_count, merged_lora_count, dropped_lora_tensor_count
+                ),
+            )
+            return normalized_state
+
+        if target_uses_lora and not has_lora_t5_keys:
+            for key, value in state_dict.items():
+                new_key = base_to_peft_key(key)
+                converted_key_count += int(new_key != key)
+                normalized_state[new_key] = value
+
+            show_log(
+                task_config,
+                "Normalized non-LoRA T5 checkpoint for LoRA load: converted {} keys.".format(
+                    converted_key_count
+                ),
+            )
+            return normalized_state
+
+        return state_dict
 
 class NormalizeVideo(nn.Module):
     def __init__(self, task_config):

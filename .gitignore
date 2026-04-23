@@ -33,3 +33,4 @@ run.ipynb
 .DS_Store
 run_final.ipynb
 ckpts/
+data/msrvtt/
