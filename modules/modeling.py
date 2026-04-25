@@ -102,10 +102,14 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
         model = cls(bert_config, visual_config, cross_config, decoder_config, *inputs, **kwargs)
 
         assert model.bert is not None
-        assert model.visual is not None
+        if not getattr(task_config, "direct_qformer_input", False):
+            assert model.visual is not None
 
         if state_dict is not None:
             state_dict = cls._filter_init_model_state_dict(state_dict, task_config=task_config)
+            state_dict = cls._adapt_init_model_state_dict_for_current_model(
+                model, state_dict, task_config=task_config
+            )
             model = cls.init_preweight(model, state_dict, task_config=task_config)
 
         return model
@@ -141,6 +145,67 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             )
         )
         return filtered_state_dict
+
+    @staticmethod
+    def _adapt_init_model_state_dict_for_current_model(model, state_dict, task_config=None):
+        target_state = model.state_dict()
+        state_dict_cls = state_dict.__class__
+        adapted_state = state_dict_cls()
+        metadata = getattr(state_dict, "_metadata", None)
+        if metadata is not None:
+            adapted_state._metadata = metadata
+
+        loaded_count = 0
+        converted_count = 0
+        skipped_missing_count = 0
+        skipped_shape = []
+
+        for key, value in state_dict.items():
+            if key not in target_state:
+                skipped_missing_count += 1
+                continue
+
+            target_value = target_state[key]
+            if tuple(value.shape) == tuple(target_value.shape):
+                adapted_state[key] = value
+                loaded_count += 1
+                continue
+
+            if key == "qformer_visual_proj.weight":
+                if (
+                    value.dim() == 2
+                    and target_value.dim() == 3
+                    and target_value.shape[-1] == 1
+                    and tuple(value.shape) == tuple(target_value.shape[:2])
+                ):
+                    adapted_state[key] = value.unsqueeze(-1)
+                    converted_count += 1
+                    continue
+                if (
+                    value.dim() == 3
+                    and value.shape[-1] == 1
+                    and target_value.dim() == 2
+                    and tuple(value.shape[:2]) == tuple(target_value.shape)
+                ):
+                    adapted_state[key] = value.squeeze(-1)
+                    converted_count += 1
+                    continue
+
+            skipped_shape.append((key, tuple(value.shape), tuple(target_value.shape)))
+
+        show_log(
+            task_config,
+            "Adapt init_model weights for current model: loaded={}, converted={}, skipped_missing={}, skipped_shape={}.".format(
+                loaded_count,
+                converted_count,
+                skipped_missing_count,
+                len(skipped_shape),
+            )
+        )
+        if skipped_shape:
+            show_log(task_config, "First skipped init_model shape mismatches: {}".format(skipped_shape[:10]))
+
+        return adapted_state
 
     @staticmethod
     def _normalize_t5_checkpoint_state_dict(state_dict, task_config=None):
@@ -282,10 +347,15 @@ class UniVL(UniVLPreTrainedModel):
 
         self._stage_one = True
         self._stage_two = False
+        self.direct_qformer_input = getattr(self.task_config, "direct_qformer_input", False)
+        if self.direct_qformer_input and self.task_config.do_pretrain:
+            raise ValueError("--direct_qformer_input is only supported for caption fine-tuning, not --do_pretrain.")
 
         if check_attr('stage_two', self.task_config):
             self._stage_one = False
             self._stage_two = self.task_config.stage_two
+        if self.direct_qformer_input and (not self._stage_two or self.task_config.task_type != "caption"):
+            raise ValueError("--direct_qformer_input requires stage-two caption fine-tuning.")
         show_log(task_config, "Stage-One:{}, Stage-Two:{}".format(self._stage_one, self._stage_two))
 
         self.train_sim_after_cross = False
@@ -303,13 +373,18 @@ class UniVL(UniVLPreTrainedModel):
         # Video Encoder ===>
         visual_config = update_attr("visual_config", visual_config, "num_hidden_layers",
                                     self.task_config, "visual_num_hidden_layers")
-        self.visual = VisualModel(visual_config)
-        self.freeze_vit = getattr(self.task_config, "freeze_vit", False)
-        if self.freeze_vit:
-            for param in self.visual.parameters():
-                param.requires_grad = False
-            show_log(task_config, "Freeze vision encoder.")
-        visual_word_embeddings_weight = self.visual.embeddings.word_embeddings.weight
+        visual_word_embeddings_weight = None
+        if self.direct_qformer_input:
+            self.visual = None
+            show_log(task_config, "Use direct video features as QFormer encoder input; skip VisualModel.")
+        else:
+            self.visual = VisualModel(visual_config)
+            self.freeze_vit = getattr(self.task_config, "freeze_vit", False)
+            if self.freeze_vit:
+                for param in self.visual.parameters():
+                    param.requires_grad = False
+                show_log(task_config, "Freeze vision encoder.")
+            visual_word_embeddings_weight = self.visual.embeddings.word_embeddings.weight
         # <=== End of Video Encoder
 
         if self._stage_one is False or self.train_sim_after_cross:
@@ -319,7 +394,25 @@ class UniVL(UniVLPreTrainedModel):
             self.cross = CrossModel(cross_config)
             self.num_query_token = getattr(self.task_config, "num_query_token", 32)
             self.qformer_vision_width = getattr(self.task_config, "qformer_vision_width", visual_config.hidden_size)
-            if self.qformer_vision_width != visual_config.hidden_size:
+            if self.direct_qformer_input:
+                adapter_type = getattr(self.task_config, "qformer_adapter_type", "conv1d")
+                if adapter_type == "conv1d":
+                    self.qformer_visual_proj = nn.Conv1d(
+                        self.task_config.video_dim,
+                        self.qformer_vision_width,
+                        kernel_size=1,
+                    )
+                elif adapter_type == "linear":
+                    self.qformer_visual_proj = nn.Linear(self.task_config.video_dim, self.qformer_vision_width)
+                else:
+                    raise ValueError("Unsupported qformer_adapter_type: {}".format(adapter_type))
+                show_log(
+                    task_config,
+                    "Add direct QFormer feature adapter ({}): {} -> {}.".format(
+                        adapter_type, self.task_config.video_dim, self.qformer_vision_width
+                    )
+                )
+            elif self.qformer_vision_width != visual_config.hidden_size:
                 self.qformer_visual_proj = nn.Linear(visual_config.hidden_size, self.qformer_vision_width)
                 show_log(
                     task_config,
@@ -590,9 +683,19 @@ class UniVL(UniVLPreTrainedModel):
             video_mask = video_mask.view(-1, video_mask.shape[-1])
             video = self.normalize_video(video)
 
+        if self.direct_qformer_input:
+            return video
+
         visual_layers, _ = self.visual(video, video_mask, output_all_encoded_layers=True)
         visual_output = visual_layers[-1]
         return visual_output
+
+    def _project_visual_for_qformer(self, visual_output):
+        if self.direct_qformer_input and isinstance(self.qformer_visual_proj, nn.Conv1d):
+            visual_output = visual_output.transpose(1, 2)
+            visual_output = self.qformer_visual_proj(visual_output)
+            return visual_output.transpose(1, 2)
+        return self.qformer_visual_proj(visual_output)
 
     def _get_cross_output(self, visual_output, video_mask, num_query_token=32):
         # Use BLIP2 Qformer query cross-attention and expose query tokens as encoder outputs.
@@ -603,7 +706,7 @@ class UniVL(UniVLPreTrainedModel):
             device=visual_output.device,
             dtype=qformer_dtype,
         )
-        visual_for_qformer = self.qformer_visual_proj(visual_output).to(dtype=qformer_dtype)
+        visual_for_qformer = self._project_visual_for_qformer(visual_output).to(dtype=qformer_dtype)
         image_atts = video_mask.long()
         query_output = self.Qformer.bert(
             query_embeds=query_tokens,

@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import os
 from torch.utils.data import Dataset
+import torch
 import numpy as np
 import pickle
 import pandas as pd
@@ -30,7 +31,12 @@ class MSRVTT_Caption_DataLoader(Dataset):
     ):
         self.csv = pd.read_csv(csv_path)
         self.data = json.load(open(json_path, 'r'))
-        self.feature_dict = pickle.load(open(features_path, 'rb'))
+        self.features_path = features_path
+        self.features_are_pt_files = os.path.isdir(features_path)
+        if self.features_are_pt_files:
+            self.feature_dict = None
+        else:
+            self.feature_dict = pickle.load(open(features_path, 'rb'))
         self.feature_framerate = feature_framerate
         self.max_words = max_words
         self.max_frames = max_frames
@@ -39,7 +45,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.max_txt_len = max_txt_len
 
         self.scst = scst
-        self.feature_size = self.feature_dict[self.csv['video_id'].values[0]].shape[-1]
+        self.feature_size = self._infer_feature_size()
 
         assert split_type in ["train", "val", "test"]
         # Train: video0 : video6512 (6513)
@@ -78,6 +84,59 @@ class MSRVTT_Caption_DataLoader(Dataset):
 
     def __len__(self):
         return self.sample_len
+
+    def _pt_feature_path(self, video_id):
+        return os.path.join(self.features_path, "{}.pt".format(video_id))
+
+    def _tensor_from_pt_object(self, obj, video_id):
+        if torch.is_tensor(obj):
+            return obj
+        if isinstance(obj, dict):
+            for key in ("features", "feature", "video", "video_features", "embeddings"):
+                value = obj.get(key)
+                if torch.is_tensor(value):
+                    return value
+        raise TypeError("Unsupported .pt feature format for {}.".format(video_id))
+
+    def _load_pt_feature(self, video_id):
+        feature_file = self._pt_feature_path(video_id)
+        if not os.path.exists(feature_file):
+            raise FileNotFoundError("Missing feature file: {}".format(feature_file))
+        feature = self._tensor_from_pt_object(
+            torch.load(feature_file, map_location="cpu"),
+            video_id,
+        )
+        if feature.dim() == 3 and feature.size(0) == 1:
+            feature = feature.squeeze(0)
+        if feature.dim() != 2:
+            raise ValueError(
+                "Expected .pt feature for {} to have shape (T, D), got {}.".format(
+                    video_id, tuple(feature.shape)
+                )
+            )
+        return feature.float().numpy()
+
+    def _load_feature(self, video_id):
+        if self.features_are_pt_files:
+            return self._load_pt_feature(video_id)
+        return self.feature_dict[video_id]
+
+    def _infer_feature_size(self):
+        if not self.features_are_pt_files:
+            return self.feature_dict[self.csv['video_id'].values[0]].shape[-1]
+
+        candidate_video_ids = list(self.csv['video_id'].values)
+        candidate_video_ids.extend(
+            video.get('video_id') for video in self.data.get('videos', []) if video.get('video_id')
+        )
+        for video_id in candidate_video_ids:
+            feature_file = self._pt_feature_path(video_id)
+            if os.path.exists(feature_file):
+                return self._load_pt_feature(video_id).shape[-1]
+
+        raise FileNotFoundError(
+            "Could not infer feature size: no .pt files found in {}".format(self.features_path)
+        )
 
     def _get_text(self, video_id, caption=None):
         k = 1
@@ -215,7 +274,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
 
         video = np.zeros((len(choice_video_ids), self.max_frames, self.feature_size), dtype=np.float32)
         for i, video_id in enumerate(choice_video_ids):
-            video_slice = self.feature_dict[video_id]
+            video_slice = self._load_feature(video_id)
 
             if self.max_frames < video_slice.shape[0]:
                 video_slice = video_slice[:self.max_frames]

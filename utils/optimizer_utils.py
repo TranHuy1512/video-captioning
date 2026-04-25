@@ -10,7 +10,7 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
     def is_qformer_param(name):
-        return name.startswith(("Qformer.", "query_tokens", "qformer_visual_proj."))
+        return name.startswith(("Qformer.", "query_tokens", "qformer_visual_proj.", "normalize_video."))
 
     def is_t5_decoder_param(name):
         return name.startswith(("t5_model.", "t5_proj."))

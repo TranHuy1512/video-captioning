@@ -33,7 +33,7 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--data_path', type=str, default='data/youcookii_caption_transcript.pickle',
                         help='caption and transcription pickle file path')
     parser.add_argument('--features_path', type=str, default='data/youcookii_videos_feature.pickle',
-                        help='feature path for 2D features')
+                        help='feature pickle path or folder containing per-video .pt feature files')
 
     parser.add_argument('--num_thread_reader', type=int, default=1, help='')
     parser.add_argument('--lr', type=float, default=0.0001, help='initial learning rate')
@@ -106,6 +106,10 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--num_query_token', type=int, default=32, help="Number of Qformer query tokens.")
     parser.add_argument('--qformer_vision_width', type=int, default=768,
                         help="Encoder feature width expected by QFormer cross-attention.")
+    parser.add_argument('--direct_qformer_input', action='store_true',
+                        help="Use features from --features_path directly as QFormer encoder input and skip VisualModel.")
+    parser.add_argument('--qformer_adapter_type', choices=['conv1d', 'linear'], default='conv1d',
+                        help="Adapter used when --direct_qformer_input maps --video_dim to --qformer_vision_width.")
     parser.add_argument('--qformer_checkpoint', type=str, default='',
                         help="Optional local path or Hugging Face repo id for QFormer weights.")
     parser.add_argument('--qformer_checkpoint_file', type=str, default='',
@@ -137,6 +141,13 @@ def get_args(description='UniVL on Caption Task'):
     # Keep the old attribute for backwards compatibility with older scripts/utilities.
     if args.beam_size is None:
         args.beam_size = args.eval_beam_size
+    if args.direct_qformer_input:
+        if args.task_type != "caption":
+            raise ValueError("--direct_qformer_input currently supports --task_type caption only.")
+        if not args.stage_two:
+            raise ValueError("--direct_qformer_input requires --stage_two so QFormer/T5 are initialized.")
+        if args.do_pretrain:
+            raise ValueError("--direct_qformer_input is not compatible with --do_pretrain.")
 
     return args
 
