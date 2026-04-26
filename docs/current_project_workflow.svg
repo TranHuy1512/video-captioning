@@ -1,0 +1,93 @@
+<svg width="1400" height="820" viewBox="0 0 1400 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0L12 6L0 12Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .input { fill: #eef6ff; stroke: #60a5fa; stroke-width: 2; }
+      .data { fill: #f0fdf4; stroke: #22c55e; stroke-width: 2; }
+      .model { fill: #fff7ed; stroke: #f97316; stroke-width: 2; }
+      .loss { fill: #fef2f2; stroke: #ef4444; stroke-width: 2; }
+      .output { fill: #f5f3ff; stroke: #8b5cf6; stroke-width: 2; }
+      .title { font: 700 34px Arial, Helvetica, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 17px Arial, Helvetica, sans-serif; fill: #475569; }
+      .label { font: 700 20px Arial, Helvetica, sans-serif; fill: #0f172a; }
+      .body { font: 500 15px Arial, Helvetica, sans-serif; fill: #334155; }
+      .small { font: 500 13px Arial, Helvetica, sans-serif; fill: #64748b; }
+      .arrow { stroke: #334155; stroke-width: 3; marker-end: url(#arrow); fill: none; }
+      .dash { stroke: #64748b; stroke-width: 2; stroke-dasharray: 7 7; marker-end: url(#arrow); fill: none; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1400" height="820"/>
+
+  <text class="title" x="70" y="70">Current Project Workflow</text>
+  <text class="subtitle" x="70" y="102">UniVL video captioning flow with direct .pt feature support and QFormer + Flan-T5 decoder</text>
+
+  <rect class="panel" x="50" y="135" width="1300" height="610" rx="16"/>
+
+  <!-- Inputs -->
+  <rect class="input" x="90" y="190" width="220" height="100" rx="12"/>
+  <text class="label" x="120" y="230">Annotations</text>
+  <text class="body" x="120" y="258">CSV split</text>
+  <text class="body" x="120" y="280">MSRVTT JSON</text>
+
+  <rect class="input" x="90" y="360" width="220" height="110" rx="12"/>
+  <text class="label" x="120" y="400">Video Features</text>
+  <text class="body" x="120" y="428">feature_path/*.pt</text>
+  <text class="body" x="120" y="450">or legacy pickle</text>
+
+  <!-- Dataloader -->
+  <rect class="data" x="390" y="270" width="230" height="130" rx="12"/>
+  <text class="label" x="425" y="312">Dataloader</text>
+  <text class="body" x="425" y="340">load captions</text>
+  <text class="body" x="425" y="362">load video tensors</text>
+  <text class="body" x="425" y="384">build masks</text>
+
+  <!-- Model main -->
+  <rect class="model" x="700" y="180" width="250" height="115" rx="12"/>
+  <text class="label" x="735" y="222">Text Path</text>
+  <text class="body" x="735" y="250">BERT tokens</text>
+  <text class="body" x="735" y="272">used when needed</text>
+
+  <rect class="model" x="700" y="340" width="250" height="130" rx="12"/>
+  <text class="label" x="735" y="382">Visual Path</text>
+  <text class="body" x="735" y="410">NormalizeVideo</text>
+  <text class="body" x="735" y="432">VisualModel or direct</text>
+  <text class="body" x="735" y="454">QFormer adapter</text>
+
+  <rect class="model" x="1020" y="280" width="250" height="120" rx="12"/>
+  <text class="label" x="1055" y="322">QFormer</text>
+  <text class="body" x="1055" y="350">query tokens</text>
+  <text class="body" x="1055" y="372">cross-attend video</text>
+
+  <rect class="model" x="1020" y="475" width="250" height="120" rx="12"/>
+  <text class="label" x="1055" y="517">Flan-T5</text>
+  <text class="body" x="1055" y="545">t5_proj</text>
+  <text class="body" x="1055" y="567">caption decoder</text>
+
+  <!-- Outputs -->
+  <rect class="loss" x="700" y="560" width="250" height="105" rx="12"/>
+  <text class="label" x="735" y="602">Training Loss</text>
+  <text class="body" x="735" y="630">XE caption loss</text>
+  <text class="body" x="735" y="652">optional SCST</text>
+
+  <rect class="output" x="1020" y="640" width="250" height="70" rx="12"/>
+  <text class="label" x="1055" y="684">Predicted Captions</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M310 240H365C380 240 390 250 390 270"/>
+  <path class="arrow" d="M310 415H365C380 415 390 400 390 390"/>
+  <path class="arrow" d="M620 320H670C690 320 700 275 700 250"/>
+  <path class="arrow" d="M620 350H670C690 350 700 390 700 405"/>
+  <path class="arrow" d="M950 405H995C1010 405 1020 372 1020 350"/>
+  <path class="arrow" d="M1145 400V475"/>
+  <path class="arrow" d="M1020 535H980C960 535 950 585 950 612"/>
+  <path class="arrow" d="M1145 595V640"/>
+
+  <!-- Alternate direct route note -->
+  <path class="dash" d="M825 470V530C825 550 825 555 825 560"/>
+  <text class="small" x="700" y="720">Direct feature mode: .pt features skip the old vision encoder and go through a small adapter before QFormer.</text>
+</svg>

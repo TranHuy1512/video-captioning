@@ -33,7 +33,7 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--data_path', type=str, default='data/youcookii_caption_transcript.pickle',
                         help='caption and transcription pickle file path')
     parser.add_argument('--features_path', type=str, default='data/youcookii_videos_feature.pickle',
-                        help='feature pickle path or folder containing per-video .pt feature files')
+                        help='feature pickle path or folder containing per-video .pickle/.pkl/.pt feature files')
 
     parser.add_argument('--num_thread_reader', type=int, default=1, help='')
     parser.add_argument('--lr', type=float, default=0.0001, help='initial learning rate')

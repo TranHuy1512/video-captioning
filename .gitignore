@@ -34,3 +34,6 @@ run.ipynb
 run_final.ipynb
 ckpts/
 data/msrvtt/
+feature_path/video0.pickle
+feature_path/video1.pickle
+feature_path/video10.pickle

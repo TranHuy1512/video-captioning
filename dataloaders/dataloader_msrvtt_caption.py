@@ -32,8 +32,9 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.csv = pd.read_csv(csv_path)
         self.data = json.load(open(json_path, 'r'))
         self.features_path = features_path
-        self.features_are_pt_files = os.path.isdir(features_path)
-        if self.features_are_pt_files:
+        self.features_are_file_folder = os.path.isdir(features_path)
+        self.feature_file_index = self._build_feature_file_index(features_path) if self.features_are_file_folder else {}
+        if self.features_are_file_folder:
             self.feature_dict = None
         else:
             self.feature_dict = pickle.load(open(features_path, 'rb'))
@@ -85,8 +86,31 @@ class MSRVTT_Caption_DataLoader(Dataset):
     def __len__(self):
         return self.sample_len
 
+    def _build_feature_file_index(self, features_path):
+        feature_file_index = defaultdict(dict)
+        feature_extensions = {".pickle", ".pkl", ".pt"}
+        for root, _, files in os.walk(features_path):
+            for file_name in files:
+                video_id, extension = os.path.splitext(file_name)
+                if extension in feature_extensions:
+                    feature_file_index[video_id][extension] = os.path.join(root, file_name)
+        return feature_file_index
+
     def _pt_feature_path(self, video_id):
+        indexed_file = self.feature_file_index.get(video_id, {}).get(".pt")
+        if indexed_file is not None:
+            return indexed_file
         return os.path.join(self.features_path, "{}.pt".format(video_id))
+
+    def _pickle_feature_path(self, video_id):
+        for extension in (".pickle", ".pkl"):
+            indexed_file = self.feature_file_index.get(video_id, {}).get(extension)
+            if indexed_file is not None:
+                return indexed_file
+            direct_file = os.path.join(self.features_path, "{}{}".format(video_id, extension))
+            if os.path.exists(direct_file):
+                return direct_file
+        return os.path.join(self.features_path, "{}.pickle".format(video_id))
 
     def _tensor_from_pt_object(self, obj, video_id):
         if torch.is_tensor(obj):
@@ -97,6 +121,19 @@ class MSRVTT_Caption_DataLoader(Dataset):
                 if torch.is_tensor(value):
                     return value
         raise TypeError("Unsupported .pt feature format for {}.".format(video_id))
+
+    def _array_from_pickle_object(self, obj, video_id):
+        if torch.is_tensor(obj):
+            return obj.float().numpy()
+        if isinstance(obj, np.ndarray):
+            return obj.astype(np.float32, copy=False)
+        if isinstance(obj, dict):
+            if video_id in obj:
+                return self._array_from_pickle_object(obj[video_id], video_id)
+            for key in ("features", "feature", "video", "video_features", "embeddings"):
+                if key in obj:
+                    return self._array_from_pickle_object(obj[key], video_id)
+        raise TypeError("Unsupported .pickle feature format for {}.".format(video_id))
 
     def _load_pt_feature(self, video_id):
         feature_file = self._pt_feature_path(video_id)
@@ -116,13 +153,32 @@ class MSRVTT_Caption_DataLoader(Dataset):
             )
         return feature.float().numpy()
 
+    def _load_pickle_feature_file(self, video_id):
+        feature_file = self._pickle_feature_path(video_id)
+        if not os.path.exists(feature_file):
+            raise FileNotFoundError("Missing feature file: {}".format(feature_file))
+        with open(feature_file, "rb") as reader:
+            feature = self._array_from_pickle_object(pickle.load(reader), video_id)
+        if feature.ndim == 3 and feature.shape[0] == 1:
+            feature = feature.squeeze(0)
+        if feature.ndim != 2:
+            raise ValueError(
+                "Expected .pickle feature for {} to have shape (T, D), got {}.".format(
+                    video_id, tuple(feature.shape)
+                )
+            )
+        return feature
+
     def _load_feature(self, video_id):
-        if self.features_are_pt_files:
+        if self.features_are_file_folder:
+            pickle_feature_file = self._pickle_feature_path(video_id)
+            if os.path.exists(pickle_feature_file):
+                return self._load_pickle_feature_file(video_id)
             return self._load_pt_feature(video_id)
         return self.feature_dict[video_id]
 
     def _infer_feature_size(self):
-        if not self.features_are_pt_files:
+        if not self.features_are_file_folder:
             return self.feature_dict[self.csv['video_id'].values[0]].shape[-1]
 
         candidate_video_ids = list(self.csv['video_id'].values)
@@ -130,12 +186,15 @@ class MSRVTT_Caption_DataLoader(Dataset):
             video.get('video_id') for video in self.data.get('videos', []) if video.get('video_id')
         )
         for video_id in candidate_video_ids:
-            feature_file = self._pt_feature_path(video_id)
-            if os.path.exists(feature_file):
+            pickle_feature_file = self._pickle_feature_path(video_id)
+            if os.path.exists(pickle_feature_file):
+                return self._load_pickle_feature_file(video_id).shape[-1]
+            pt_feature_file = self._pt_feature_path(video_id)
+            if os.path.exists(pt_feature_file):
                 return self._load_pt_feature(video_id).shape[-1]
 
         raise FileNotFoundError(
-            "Could not infer feature size: no .pt files found in {}".format(self.features_path)
+            "Could not infer feature size: no .pickle, .pkl, or .pt files found in {}".format(self.features_path)
         )
 
     def _get_text(self, video_id, caption=None):
