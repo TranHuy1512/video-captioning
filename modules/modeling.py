@@ -515,7 +515,8 @@ class UniVL(UniVLPreTrainedModel):
         self._init_weights_except_pretrained_submodules()
 
     def _init_weights_except_pretrained_submodules(self):
-        skip_roots = {"Qformer", "t5_model"}
+        # skip_roots = {"Qformer", "t5_model"}
+        skip_roots = {"Qformer", "t5_model", "t5_proj", "qformer_visual_proj", "query_tokens", "normalize_video"}
 
         def init_module(module):
             for name, child in module._modules.items():

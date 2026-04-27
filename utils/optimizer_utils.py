@@ -6,7 +6,8 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
     if hasattr(model, 'module'):
         model = model.module
 
-    param_optimizer = list(model.named_parameters())
+    # Only optimize trainable parameters.
+    param_optimizer = [(n, p) for n, p in model.named_parameters() if p.requires_grad]
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
     def is_qformer_param(name):
@@ -24,8 +25,8 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
     lr_qformer = getattr(args, "lr_qformer", args.lr)
     lr_lora = getattr(args, "lr_lora", args.lr)
 
-    no_decay_param_tp = [(n, p) for n, p in param_optimizer if not any(nd in n for nd in no_decay)]
-    decay_param_tp = [(n, p) for n, p in param_optimizer if any(nd in n for nd in no_decay)]
+    decay_param_tp = [(n, p) for n, p in param_optimizer if not any(nd in n for nd in no_decay)]
+    no_decay_param_tp = [(n, p) for n, p in param_optimizer if any(nd in n for nd in no_decay)]
 
     no_decay_bert_param_tp = [(n, p) for n, p in no_decay_param_tp if is_bert_param(n)]
     no_decay_qformer_param_tp = [(n, p) for n, p in no_decay_param_tp if is_qformer_param(n)]
@@ -38,14 +39,14 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
     decay_other_param_tp = [(n, p) for n, p in decay_param_tp if is_other_param(n)]
 
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in no_decay_bert_param_tp], 'weight_decay': 0.01, 'lr': args.lr * coef_lr},
-        {'params': [p for n, p in no_decay_qformer_param_tp], 'weight_decay': 0.01, 'lr': lr_qformer},
-        {'params': [p for n, p in no_decay_t5_decoder_param_tp], 'weight_decay': 0.01, 'lr': lr_lora},
-        {'params': [p for n, p in no_decay_other_param_tp], 'weight_decay': 0.01},
-        {'params': [p for n, p in decay_bert_param_tp], 'weight_decay': 0.0, 'lr': args.lr * coef_lr},
-        {'params': [p for n, p in decay_qformer_param_tp], 'weight_decay': 0.0, 'lr': lr_qformer},
-        {'params': [p for n, p in decay_t5_decoder_param_tp], 'weight_decay': 0.0, 'lr': lr_lora},
-        {'params': [p for n, p in decay_other_param_tp], 'weight_decay': 0.0}
+        {'params': [p for n, p in decay_bert_param_tp], 'weight_decay': 0.01, 'lr': args.lr * coef_lr},
+        {'params': [p for n, p in decay_qformer_param_tp], 'weight_decay': 0.01, 'lr': lr_qformer},
+        {'params': [p for n, p in decay_t5_decoder_param_tp], 'weight_decay': 0.01, 'lr': lr_lora},
+        {'params': [p for n, p in decay_other_param_tp], 'weight_decay': 0.01},
+        {'params': [p for n, p in no_decay_bert_param_tp], 'weight_decay': 0.0, 'lr': args.lr * coef_lr},
+        {'params': [p for n, p in no_decay_qformer_param_tp], 'weight_decay': 0.0, 'lr': lr_qformer},
+        {'params': [p for n, p in no_decay_t5_decoder_param_tp], 'weight_decay': 0.0, 'lr': lr_lora},
+        {'params': [p for n, p in no_decay_other_param_tp], 'weight_decay': 0.0}
     ]
 
     # P2: Use constant LR schedule for SCST (RL) training instead of linear decay.

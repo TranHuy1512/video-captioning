@@ -95,6 +95,10 @@ def get_args(description='UniVL on Caption Task'):
 
     parser.add_argument('--freeze_vit', action='store_true', help="Freeze vision encoder parameters.")
     parser.add_argument('--scst', action='store_true', help="Enable SCST training for caption loss.")
+    parser.add_argument('--scst_alpha', type=float, default=0.7,
+                        help="XE/SCST interpolation during SCST training: alpha * XE + (1-alpha) * SCST.")
+    parser.add_argument('--scst_min_length', type=int, default=3,
+                        help="Minimum generated caption length during SCST sampling.")
     parser.add_argument('--eval_beam_size', type=int, default=None,
                         help="Beam size used for deterministic caption generation during eval/test.")
     parser.add_argument('--scst_num_samples', type=int, default=None,
@@ -137,7 +141,7 @@ def get_args(description='UniVL on Caption Task'):
     if args.eval_beam_size is None:
         args.eval_beam_size = args.beam_size if args.beam_size is not None else 5
     if args.scst_num_samples is None:
-        args.scst_num_samples = args.beam_size if args.beam_size is not None else 10
+        args.scst_num_samples = args.beam_size if args.beam_size is not None else 5
     # Keep the old attribute for backwards compatibility with older scripts/utilities.
     if args.beam_size is None:
         args.beam_size = args.eval_beam_size

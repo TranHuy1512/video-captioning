@@ -13,6 +13,24 @@ from collections import defaultdict
 import json
 import random
 
+
+class NumpyCompatUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module.startswith("numpy._core"):
+            module = module.replace("numpy._core", "numpy.core", 1)
+        return super(NumpyCompatUnpickler, self).find_class(module, name)
+
+
+def load_pickle_with_numpy_compat(reader):
+    try:
+        return pickle.load(reader)
+    except ModuleNotFoundError as error:
+        if error.name is None or not error.name.startswith("numpy._core"):
+            raise
+        reader.seek(0)
+        return NumpyCompatUnpickler(reader).load()
+
+
 class MSRVTT_Caption_DataLoader(Dataset):
     """MSRVTT train dataset loader."""
     def __init__(
@@ -37,7 +55,8 @@ class MSRVTT_Caption_DataLoader(Dataset):
         if self.features_are_file_folder:
             self.feature_dict = None
         else:
-            self.feature_dict = pickle.load(open(features_path, 'rb'))
+            with open(features_path, 'rb') as reader:
+                self.feature_dict = load_pickle_with_numpy_compat(reader)
         self.feature_framerate = feature_framerate
         self.max_words = max_words
         self.max_frames = max_frames
@@ -158,7 +177,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
         if not os.path.exists(feature_file):
             raise FileNotFoundError("Missing feature file: {}".format(feature_file))
         with open(feature_file, "rb") as reader:
-            feature = self._array_from_pickle_object(pickle.load(reader), video_id)
+            feature = self._array_from_pickle_object(load_pickle_with_numpy_compat(reader), video_id)
         if feature.ndim == 3 and feature.shape[0] == 1:
             feature = feature.squeeze(0)
         if feature.ndim != 2:
@@ -336,7 +355,12 @@ class MSRVTT_Caption_DataLoader(Dataset):
             video_slice = self._load_feature(video_id)
 
             if self.max_frames < video_slice.shape[0]:
-                video_slice = video_slice[:self.max_frames]
+                # Preserve information from the full sequence instead of
+                # taking only the first max_frames entries.
+                # This is important when feature files contain long token/frame
+                # sequences (e.g., fused features with T >> max_frames).
+                chunks = np.array_split(video_slice, self.max_frames, axis=0)
+                video_slice = np.stack([chunk.mean(axis=0) for chunk in chunks], axis=0)
 
             slice_shape = video_slice.shape
             max_video_length[i] = max_video_length[i] if max_video_length[i] > slice_shape[0] else slice_shape[0]

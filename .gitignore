@@ -32,7 +32,7 @@ dataset-metadata.json
 run.ipynb
 .DS_Store
 run_final.ipynb
-ckpts/
+# ckpts/
 data/msrvtt/
 feature_path/video0.pickle
 feature_path/video1.pickle
