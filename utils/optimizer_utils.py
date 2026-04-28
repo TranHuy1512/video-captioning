@@ -51,7 +51,12 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
 
     # P2: Use constant LR schedule for SCST (RL) training instead of linear decay.
     # Linear decay drives LR to 0, which is counterproductive for RL fine-tuning.
-    schedule = 'warmup_constant' if getattr(args, 'scst', False) else 'warmup_linear'
+    # For CE training, use cosine schedule to avoid LR collapsing to zero too
+    # early — critical when training a newly-initialized adapter (TemporalAdapter).
+    if getattr(args, 'scst', False):
+        schedule = 'warmup_constant'
+    else:
+        schedule = 'warmup_cosine'
 
     scheduler = None
     optimizer = BertAdam(optimizer_grouped_parameters, lr=args.lr, warmup=args.warmup_proportion,

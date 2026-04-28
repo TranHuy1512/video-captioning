@@ -112,8 +112,21 @@ def get_args(description='UniVL on Caption Task'):
                         help="Encoder feature width expected by QFormer cross-attention.")
     parser.add_argument('--direct_qformer_input', action='store_true',
                         help="Use features from --features_path directly as QFormer encoder input and skip VisualModel.")
-    parser.add_argument('--qformer_adapter_type', choices=['conv1d', 'linear'], default='conv1d',
+    parser.add_argument('--qformer_adapter_type', choices=['temporal', 'conv1d', 'linear'], default='temporal',
                         help="Adapter used when --direct_qformer_input maps --video_dim to --qformer_vision_width.")
+    parser.add_argument('--adapter_temporal_kernel', type=int, default=5,
+                        help="Kernel size for the TemporalAdapter depthwise temporal convolution.")
+    parser.add_argument('--adapter_pool_size', type=int, default=0,
+                        help="If > 0, apply adaptive avg pooling on the temporal axis AFTER adapter projection "
+                             "to reduce long token sequences (e.g. 1352) to this size before QFormer. "
+                             "Typical values: 256, 512. Set to 0 to disable (use max_frames from dataloader).")
+    parser.add_argument('--skip_init_adapter', action='store_true', default=None,
+                        help="Skip loading qformer_visual_proj and normalize_video weights from --init_model. "
+                             "Use when the init_model was trained with different features. "
+                             "Default: True when --direct_qformer_input is set.")
+    parser.add_argument('--no_skip_init_adapter', dest='skip_init_adapter', action='store_false',
+                        help="Load qformer_visual_proj and normalize_video weights from --init_model. "
+                             "Use when reusing an old model trained on the SAME features.")
     parser.add_argument('--qformer_checkpoint', type=str, default='',
                         help="Optional local path or Hugging Face repo id for QFormer weights.")
     parser.add_argument('--qformer_checkpoint_file', type=str, default='',
@@ -152,6 +165,10 @@ def get_args(description='UniVL on Caption Task'):
             raise ValueError("--direct_qformer_input requires --stage_two so QFormer/T5 are initialized.")
         if args.do_pretrain:
             raise ValueError("--direct_qformer_input is not compatible with --do_pretrain.")
+
+    # Default skip_init_adapter: True when direct_qformer_input is set, False otherwise.
+    if args.skip_init_adapter is None:
+        args.skip_init_adapter = args.direct_qformer_input
 
     return args
 

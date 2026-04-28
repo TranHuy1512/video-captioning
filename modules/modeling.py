@@ -119,7 +119,7 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
         state_dict = UniVLPreTrainedModel._normalize_t5_checkpoint_state_dict(
             state_dict, task_config=task_config
         )
-        allowed_prefixes = (
+        allowed_prefixes = [
             "bert.",
             "visual.",
             "Qformer.",
@@ -128,7 +128,20 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             "t5_model.",
             "t5_proj.",
             "normalize_video.",
-        )
+        ]
+        # When skip_init_adapter is True, the adapter and video normalizer
+        # are new modules trained from scratch — do NOT load init_model
+        # weights for them because the init_model was trained on different
+        # features and the shapes/distributions will mismatch.
+        skip_adapter = bool(getattr(task_config, "skip_init_adapter", False)) if task_config else False
+        if skip_adapter:
+            allowed_prefixes = [
+                p for p in allowed_prefixes
+                if p not in ("qformer_visual_proj.", "normalize_video.")
+            ]
+            show_log(task_config, "skip_init_adapter: skip init_model weights for qformer_visual_proj and normalize_video.")
+
+        allowed_prefixes = tuple(allowed_prefixes)
         filtered_state_dict = state_dict.__class__(
             (key, value) for key, value in state_dict.items()
             if key.startswith(allowed_prefixes)
@@ -308,6 +321,38 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
         return state_dict
 
+class TemporalAdapter(nn.Module):
+    """Temporal-aware feature adapter that projects features and applies
+    depthwise temporal convolution with gating, mimicking an STC-like module.
+    Replaces the pointwise Conv1d for --direct_qformer_input."""
+    def __init__(self, in_dim, out_dim, kernel_size=5):
+        super(TemporalAdapter, self).__init__()
+        self.down_proj = nn.Linear(in_dim, out_dim)
+        self.temporal = nn.Conv1d(
+            out_dim, out_dim,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            groups=out_dim,  # depthwise: cheap temporal mixing
+        )
+        self.act = nn.GELU()
+        self.norm = LayerNorm(out_dim)
+        self.gate = nn.Sequential(
+            nn.Linear(out_dim, out_dim),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x):
+        # x: (B, T, D_in)
+        x = self.down_proj(x)            # (B, T, D_out)
+        residual = x
+        xt = x.transpose(1, 2)           # (B, D_out, T)
+        xt = self.act(self.temporal(xt))  # temporal convolution
+        xt = xt.transpose(1, 2)           # (B, T, D_out)
+        g = self.gate(residual)           # (B, T, D_out)
+        x = self.norm(g * xt + (1 - g) * residual)
+        return x
+
+
 class NormalizeVideo(nn.Module):
     def __init__(self, task_config):
         super(NormalizeVideo, self).__init__()
@@ -317,6 +362,16 @@ class NormalizeVideo(nn.Module):
         video = torch.as_tensor(video).float()
         video = video.view(-1, video.shape[-2], video.shape[-1])
         video = self.visual_norm2d(video)
+        return video
+
+
+class NormalizeVideoDirect(nn.Module):
+    """Lightweight video normalizer for --direct_qformer_input.
+    Casts to float and reshapes but does NOT apply LayerNorm, since
+    pre-extracted features have their own normalization."""
+    def forward(self, video):
+        video = torch.as_tensor(video).float()
+        video = video.view(-1, video.shape[-2], video.shape[-1])
         return video
 
 def show_log(task_config, info):
@@ -342,8 +397,12 @@ class UniVL(UniVLPreTrainedModel):
 
         assert self.task_config.max_words <= bert_config.max_position_embeddings
         assert self.task_config.max_words <= decoder_config.max_target_embeddings
-        assert self.task_config.max_frames <= visual_config.max_position_embeddings
-        assert self.task_config.max_words + self.task_config.max_frames <= cross_config.max_position_embeddings
+        if not getattr(self.task_config, "direct_qformer_input", False):
+            # These assertions only apply when using the visual encoder + cross encoder.
+            # With direct_qformer_input, the visual encoder is skipped and the QFormer
+            # handles the (possibly pooled) sequence — no positional embedding limit applies.
+            assert self.task_config.max_frames <= visual_config.max_position_embeddings
+            assert self.task_config.max_words + self.task_config.max_frames <= cross_config.max_position_embeddings
 
         self._stage_one = True
         self._stage_two = False
@@ -395,8 +454,15 @@ class UniVL(UniVLPreTrainedModel):
             self.num_query_token = getattr(self.task_config, "num_query_token", 32)
             self.qformer_vision_width = getattr(self.task_config, "qformer_vision_width", visual_config.hidden_size)
             if self.direct_qformer_input:
-                adapter_type = getattr(self.task_config, "qformer_adapter_type", "conv1d")
-                if adapter_type == "conv1d":
+                adapter_type = getattr(self.task_config, "qformer_adapter_type", "temporal")
+                if adapter_type == "temporal":
+                    temporal_kernel = getattr(self.task_config, "adapter_temporal_kernel", 5)
+                    self.qformer_visual_proj = TemporalAdapter(
+                        self.task_config.video_dim,
+                        self.qformer_vision_width,
+                        kernel_size=temporal_kernel,
+                    )
+                elif adapter_type == "conv1d":
                     self.qformer_visual_proj = nn.Conv1d(
                         self.task_config.video_dim,
                         self.qformer_vision_width,
@@ -406,6 +472,21 @@ class UniVL(UniVLPreTrainedModel):
                     self.qformer_visual_proj = nn.Linear(self.task_config.video_dim, self.qformer_vision_width)
                 else:
                     raise ValueError("Unsupported qformer_adapter_type: {}".format(adapter_type))
+
+                # Adaptive pooling: reduce long token sequences (e.g. 1352 from STC)
+                # down to a manageable size before QFormer.
+                self.adapter_pool_size = getattr(self.task_config, "adapter_pool_size", 0)
+                if self.adapter_pool_size > 0:
+                    self.adapter_pool = nn.AdaptiveAvgPool1d(self.adapter_pool_size)
+                    show_log(
+                        task_config,
+                        "Add adaptive pool after adapter: T -> {} tokens before QFormer.".format(
+                            self.adapter_pool_size
+                        ),
+                    )
+                else:
+                    self.adapter_pool = None
+
                 show_log(
                     task_config,
                     "Add direct QFormer feature adapter ({}): {} -> {}.".format(
@@ -495,7 +576,11 @@ class UniVL(UniVLPreTrainedModel):
                 
             self.similarity_dense = nn.Linear(bert_config.hidden_size, 1)
 
-        self.normalize_video = NormalizeVideo(task_config)
+        if self.direct_qformer_input:
+            self.normalize_video = NormalizeVideoDirect()
+            show_log(task_config, "Using NormalizeVideoDirect (no LayerNorm) for pre-extracted direct features.")
+        else:
+            self.normalize_video = NormalizeVideo(task_config)
 
         mil_nce_loss = MILNCELoss(batch_size=task_config.batch_size // task_config.n_gpu, n_pair=task_config.n_pair, )
         max_margin_ranking_loss = MaxMarginRankingLoss(margin=task_config.margin,
@@ -695,8 +780,19 @@ class UniVL(UniVLPreTrainedModel):
         if self.direct_qformer_input and isinstance(self.qformer_visual_proj, nn.Conv1d):
             visual_output = visual_output.transpose(1, 2)
             visual_output = self.qformer_visual_proj(visual_output)
-            return visual_output.transpose(1, 2)
-        return self.qformer_visual_proj(visual_output)
+            visual_output = visual_output.transpose(1, 2)
+        else:
+            # TemporalAdapter and nn.Linear both accept (B, T, D) directly
+            visual_output = self.qformer_visual_proj(visual_output)
+
+        # Adaptive pooling to reduce long sequences (e.g. 1352 from STC)
+        if getattr(self, "adapter_pool", None) is not None:
+            # visual_output: (B, T, D) -> pool along T
+            visual_output = visual_output.transpose(1, 2)          # (B, D, T)
+            visual_output = self.adapter_pool(visual_output)        # (B, D, pool_size)
+            visual_output = visual_output.transpose(1, 2)          # (B, pool_size, D)
+
+        return visual_output
 
     def _get_cross_output(self, visual_output, video_mask, num_query_token=32):
         # Use BLIP2 Qformer query cross-attention and expose query tokens as encoder outputs.
@@ -708,7 +804,17 @@ class UniVL(UniVLPreTrainedModel):
             dtype=qformer_dtype,
         )
         visual_for_qformer = self._project_visual_for_qformer(visual_output).to(dtype=qformer_dtype)
-        image_atts = video_mask.long()
+
+        # Build attention mask matching the (possibly pooled) visual sequence length
+        pool_size = getattr(self, "adapter_pool_size", 0)
+        if pool_size > 0:
+            # After adaptive pooling all sequences have exactly pool_size tokens — all valid
+            image_atts = torch.ones(
+                (b_visual, pool_size), dtype=torch.long, device=visual_output.device
+            )
+        else:
+            image_atts = video_mask.long()
+
         query_output = self.Qformer.bert(
             query_embeds=query_tokens,
             encoder_hidden_states=visual_for_qformer,
