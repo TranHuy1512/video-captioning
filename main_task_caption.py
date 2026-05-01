@@ -112,6 +112,10 @@ def get_args(description='UniVL on Caption Task'):
                         help="Optional exact checkpoint filename inside the QFormer checkpoint repo/path.")
     parser.add_argument('--qformer_checkpoint_local_files_only', action='store_true',
                         help="Load QFormer checkpoint from local Hugging Face cache only.")
+    parser.add_argument('--qformer_diversity_weight', type=float, default=0.05,
+                        help="Weight for Q-Former query token diversity regularization loss "
+                             "(0.0 to disable). Penalises high cosine similarity between different "
+                             "query tokens to encourage specialization. Default: 0.05")
     parser.add_argument('--lora', action='store_true', help="Enable LoRA for T5.")
     parser.add_argument('--lora_r', type=int, default=16, help="LoRA rank.")
     parser.add_argument('--lora_alpha', type=int, default=32, help="LoRA alpha.")

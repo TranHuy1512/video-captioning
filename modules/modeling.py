@@ -339,9 +339,9 @@ class UniVL(UniVLPreTrainedModel):
             self.Qformer.cls = None
             self.Qformer.bert.embeddings.word_embeddings = None
             self.Qformer.bert.embeddings.position_embeddings = None
-            for layer in self.Qformer.bert.encoder.layer:
-                layer.output = None
-                layer.intermediate = None
+            # for layer in self.Qformer.bert.encoder.layer:
+            #     layer.output = None
+            #     layer.intermediate = None
             # <=== End of Cross Encoder
 
             if self.train_sim_after_cross is False:
@@ -422,7 +422,8 @@ class UniVL(UniVLPreTrainedModel):
         self._init_weights_except_pretrained_submodules()
 
     def _init_weights_except_pretrained_submodules(self):
-        skip_roots = {"Qformer", "t5_model"}
+        # skip_roots = {"Qformer", "t5_model"}
+        skip_roots = {"Qformer", "t5_model", "t5_proj", "qformer_visual_proj", "query_tokens", "normalize_video"}
 
         def init_module(module):
             for name, child in module._modules.items():
@@ -617,8 +618,18 @@ class UniVL(UniVLPreTrainedModel):
 
         return cross_output, pooled_output
 
-    def _build_t5_encoder_inputs(self, visual_output, video_mask):
-        cross_output, _ = self._get_cross_output(visual_output, video_mask)
+    def _build_t5_encoder_inputs(self, visual_output, video_mask, cross_output=None):
+        """Build T5 encoder inputs from visual features via Q-Former.
+
+        Args:
+            visual_output: Visual encoder output [B, T, visual_dim]
+            video_mask:    Binary mask for valid frames [B, T]
+            cross_output:  Optional pre-computed Q-Former output [B, Q, hidden].
+                           Pass this to reuse a Q-Former forward already done in
+                           the caller (avoids a redundant second Q-Former pass).
+        """
+        if cross_output is None:
+            cross_output, _ = self._get_cross_output(visual_output, video_mask)
         inputs_t5 = self.t5_proj(cross_output)
         atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long, device=inputs_t5.device)
 
@@ -718,6 +729,27 @@ class UniVL(UniVLPreTrainedModel):
     #     loss = -(sequences_scores) * (reward - reward_baseline).detach()
     #     return loss.mean()
 
+    def _compute_diversity_loss(self, cross_output):
+        """Penalise high cosine similarity between different Q-Former query tokens.
+
+        This encourages the 32 query tokens to specialise to different temporal/
+        semantic aspects of the video rather than collapsing to near-identical
+        representations.
+
+        Args:
+            cross_output: Q-Former output [B, Q, hidden]
+        Returns:
+            Scalar diversity loss (mean off-diagonal cosine similarity).
+        """
+        # Work in float32 for numerical stability; cross_output may be bfloat16
+        q = F.normalize(cross_output.float(), dim=-1)          # [B, Q, H]
+        sim = torch.bmm(q, q.transpose(1, 2))                  # [B, Q, Q]  values in [-1, 1]
+        Q = sim.size(1)
+        # Mask the diagonal (self-similarity = 1, always; we only penalise cross-token sim)
+        off_diag = 1.0 - torch.eye(Q, device=sim.device).unsqueeze(0)  # [1, Q, Q]
+        diversity_loss = (sim * off_diag).sum() / (off_diag.sum() * sim.size(0))
+        return diversity_loss.to(cross_output.dtype)
+
     def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
         if output_caption_ids is None:
             return torch.tensor(0.0, device=visual_output.device)
@@ -730,17 +762,31 @@ class UniVL(UniVLPreTrainedModel):
         output_caption_ids = output_caption_ids.view(-1, output_caption_ids.shape[-1])
         t5_output_caption_ids = t5_output_caption_ids.view(-1, t5_output_caption_ids.shape[-1])
 
-        with torch.amp.autocast(device_type="cuda",dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
+        with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
+            # ── Run Q-Former once; reuse cross_output for both diversity loss
+            # and T5 encoder input construction (avoids a redundant forward pass).
+            cross_output, _ = self._get_cross_output(visual_output, video_mask)
+
+            # Diversity regularization: only during training, weight configurable
+            diversity_weight = getattr(self.task_config, "qformer_diversity_weight", 0.05)
+            diversity_loss = (
+                self._compute_diversity_loss(cross_output)
+                if (self.training and diversity_weight > 0.0)
+                else 0.0
+            )
+
             inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
-                visual_output, video_mask
+                visual_output, video_mask, cross_output=cross_output
             )
             if self.training and getattr(self, "scst", False):
                 xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
                 scst_loss = self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
                 alpha = getattr(self.task_config, "scst_alpha", 0.7)
-                return alpha * xe_loss + (1 - alpha) * scst_loss
-                # return self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
-            return self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+                caption_loss = alpha * xe_loss + (1 - alpha) * scst_loss
+            else:
+                caption_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+
+            return caption_loss + diversity_weight * diversity_loss
 
 
     def _get_cider_scorer(self):
