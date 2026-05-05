@@ -36,7 +36,6 @@ from modules.module_bert import BertModel, BertConfig, BertOnlyMLMHead
 from modules.module_visual import VisualModel, VisualConfig, VisualOnlyMLMHead
 from modules.module_cross import CrossModel, CrossConfig
 from modules.module_decoder import DecoderConfig
-from modules.blip2 import Blip2Base
 # from modules.modeling_t5 import T5Config, T5ForConditionalGeneration
 from transformers import T5Config, T5ForConditionalGeneration
 
@@ -118,9 +117,7 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
         allowed_prefixes = (
             "bert.",
             "visual.",
-            "Qformer.",
-            "query_tokens",
-            "qformer_visual_proj.",
+            "cross.",
             "t5_model.",
             "t5_proj.",
             "normalize_video.",
@@ -317,31 +314,6 @@ class UniVL(UniVLPreTrainedModel):
             cross_config = update_attr("cross_config", cross_config, "num_hidden_layers",
                                         self.task_config, "cross_num_hidden_layers")
             self.cross = CrossModel(cross_config)
-            self.num_query_token = getattr(self.task_config, "num_query_token", 32)
-            self.qformer_vision_width = getattr(self.task_config, "qformer_vision_width", visual_config.hidden_size)
-            if self.qformer_vision_width != visual_config.hidden_size:
-                self.qformer_visual_proj = nn.Linear(visual_config.hidden_size, self.qformer_vision_width)
-                show_log(
-                    task_config,
-                    "Add QFormer visual projection: {} -> {}.".format(
-                        visual_config.hidden_size, self.qformer_vision_width
-                    )
-                )
-            else:
-                self.qformer_visual_proj = nn.Identity()
-            self.Qformer, self.query_tokens = Blip2Base.init_Qformer(
-                self.num_query_token,
-                self.qformer_vision_width,
-                qformer_checkpoint=getattr(self.task_config, "qformer_checkpoint", None),
-                qformer_checkpoint_file=getattr(self.task_config, "qformer_checkpoint_file", None),
-                local_files_only=getattr(self.task_config, "qformer_checkpoint_local_files_only", False),
-            )
-            self.Qformer.cls = None
-            self.Qformer.bert.embeddings.word_embeddings = None
-            self.Qformer.bert.embeddings.position_embeddings = None
-            # for layer in self.Qformer.bert.encoder.layer:
-            #     layer.output = None
-            #     layer.intermediate = None
             # <=== End of Cross Encoder
 
             if self.train_sim_after_cross is False:
@@ -391,7 +363,7 @@ class UniVL(UniVLPreTrainedModel):
                     self.t5_model.print_trainable_parameters()
 
                 self.t5_proj = nn.Linear(
-                    self.Qformer.config.hidden_size, self.t5_model.config.hidden_size
+                    cross_config.hidden_size, self.t5_model.config.hidden_size
                 )
                 # <=== End of Decoder
 
@@ -422,8 +394,7 @@ class UniVL(UniVLPreTrainedModel):
         self._init_weights_except_pretrained_submodules()
 
     def _init_weights_except_pretrained_submodules(self):
-        # skip_roots = {"Qformer", "t5_model"}
-        skip_roots = {"Qformer", "t5_model", "t5_proj", "qformer_visual_proj", "query_tokens", "normalize_video"}
+        skip_roots = {"t5_model"}
 
         def init_module(module):
             for name, child in module._modules.items():
@@ -595,41 +566,30 @@ class UniVL(UniVLPreTrainedModel):
         visual_output = visual_layers[-1]
         return visual_output
 
-    def _get_cross_output(self, visual_output, video_mask, num_query_token=32):
-        # Use BLIP2 Qformer query cross-attention and expose query tokens as encoder outputs.
-        b_visual, _, _ = visual_output.size()
-        query_len = min(num_query_token, self.query_tokens.size(1))
-        qformer_dtype = self.query_tokens.dtype
-        query_tokens = self.query_tokens[:, :query_len, :].expand(b_visual, -1, -1).to(
-            device=visual_output.device,
-            dtype=qformer_dtype,
-        )
-        visual_for_qformer = self.qformer_visual_proj(visual_output).to(dtype=qformer_dtype)
-        image_atts = video_mask.long()
-        query_output = self.Qformer.bert(
-            query_embeds=query_tokens,
-            encoder_hidden_states=visual_for_qformer,
-            encoder_attention_mask=image_atts,
-            return_dict=True,
-        )
+    def _get_cross_output(self, visual_output, video_mask, sequence_output=None, attention_mask=None):
+        if sequence_output is not None:
+            if attention_mask is None:
+                raise ValueError("attention_mask is required when sequence_output is provided.")
+            concat_features = torch.cat((sequence_output, visual_output), dim=1)
+            concat_mask = torch.cat((attention_mask, video_mask), dim=1)
+            text_type = torch.zeros_like(attention_mask)
+            video_type = torch.ones_like(video_mask)
+            concat_type = torch.cat((text_type, video_type), dim=1)
+        else:
+            concat_features = visual_output
+            concat_mask = video_mask
+            concat_type = torch.ones_like(video_mask)
 
-        cross_output = query_output.last_hidden_state.to(dtype=visual_output.dtype)
-        pooled_output = cross_output[:, 0]
+        cross_layers, pooled_output = self.cross(
+            concat_features, concat_type, concat_mask, output_all_encoded_layers=True
+        )
+        cross_output = cross_layers[-1]
 
-        return cross_output, pooled_output
+        return cross_output, pooled_output, concat_mask
 
     def _build_t5_encoder_inputs(self, visual_output, video_mask, cross_output=None):
-        """Build T5 encoder inputs from visual features via Q-Former.
-
-        Args:
-            visual_output: Visual encoder output [B, T, visual_dim]
-            video_mask:    Binary mask for valid frames [B, T]
-            cross_output:  Optional pre-computed Q-Former output [B, Q, hidden].
-                           Pass this to reuse a Q-Former forward already done in
-                           the caller (avoids a redundant second Q-Former pass).
-        """
         if cross_output is None:
-            cross_output, _ = self._get_cross_output(visual_output, video_mask)
+            cross_output, _, _ = self._get_cross_output(visual_output, video_mask)
         inputs_t5 = self.t5_proj(cross_output)
         atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long, device=inputs_t5.device)
 
@@ -729,27 +689,6 @@ class UniVL(UniVLPreTrainedModel):
     #     loss = -(sequences_scores) * (reward - reward_baseline).detach()
     #     return loss.mean()
 
-    def _compute_diversity_loss(self, cross_output):
-        """Penalise high cosine similarity between different Q-Former query tokens.
-
-        This encourages the 32 query tokens to specialise to different temporal/
-        semantic aspects of the video rather than collapsing to near-identical
-        representations.
-
-        Args:
-            cross_output: Q-Former output [B, Q, hidden]
-        Returns:
-            Scalar diversity loss (mean off-diagonal cosine similarity).
-        """
-        # Work in float32 for numerical stability; cross_output may be bfloat16
-        q = F.normalize(cross_output.float(), dim=-1)          # [B, Q, H]
-        sim = torch.bmm(q, q.transpose(1, 2))                  # [B, Q, Q]  values in [-1, 1]
-        Q = sim.size(1)
-        # Mask the diagonal (self-similarity = 1, always; we only penalise cross-token sim)
-        off_diag = 1.0 - torch.eye(Q, device=sim.device).unsqueeze(0)  # [1, Q, Q]
-        diversity_loss = (sim * off_diag).sum() / (off_diag.sum() * sim.size(0))
-        return diversity_loss.to(cross_output.dtype)
-
     def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
         if output_caption_ids is None:
             return torch.tensor(0.0, device=visual_output.device)
@@ -763,18 +702,7 @@ class UniVL(UniVLPreTrainedModel):
         t5_output_caption_ids = t5_output_caption_ids.view(-1, t5_output_caption_ids.shape[-1])
 
         with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            # ── Run Q-Former once; reuse cross_output for both diversity loss
-            # and T5 encoder input construction (avoids a redundant forward pass).
-            cross_output, _ = self._get_cross_output(visual_output, video_mask)
-
-            # Diversity regularization: only during training, weight configurable
-            diversity_weight = getattr(self.task_config, "qformer_diversity_weight", 0.05)
-            diversity_loss = (
-                self._compute_diversity_loss(cross_output)
-                if (self.training and diversity_weight > 0.0)
-                else 0.0
-            )
-
+            cross_output, _, _ = self._get_cross_output(visual_output, video_mask)
             inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
                 visual_output, video_mask, cross_output=cross_output
             )
@@ -786,7 +714,7 @@ class UniVL(UniVLPreTrainedModel):
             else:
                 caption_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
 
-            return caption_loss + diversity_weight * diversity_loss
+            return caption_loss
 
 
     def _get_cider_scorer(self):
@@ -940,7 +868,7 @@ class UniVL(UniVLPreTrainedModel):
         return text_out, video_out
 
     def _cross_similarity(self, sequence_output, visual_output, attention_mask, video_mask):
-        b_text, _, _ = sequence_output.size()
+        b_text, s_text, h_text = sequence_output.size()
         b_visual, s_visual, h_visual = visual_output.size()
 
         retrieve_logits_list = []
@@ -952,8 +880,14 @@ class UniVL(UniVLPreTrainedModel):
             split_size += [release_size]
 
         sequence_output_splits = torch.split(sequence_output, split_size, dim=0)
+        attention_mask_splits = torch.split(attention_mask, split_size, dim=0)
         for i in range(len(split_size)):
             sequence_output_row = sequence_output_splits[i]
+            attention_mask_row = attention_mask_splits[i]
+            sequence_output_l = sequence_output_row.unsqueeze(1).repeat(1, b_visual, 1, 1)
+            sequence_output_l = sequence_output_l.view(-1, s_text, h_text)
+            attention_mask_l = attention_mask_row.unsqueeze(1).repeat(1, b_visual, 1)
+            attention_mask_l = attention_mask_l.view(-1, s_text)
 
             step_truth = sequence_output_row.size(0)
             visual_output_r = visual_output.unsqueeze(0).repeat(step_truth, 1, 1, 1)
@@ -961,7 +895,11 @@ class UniVL(UniVLPreTrainedModel):
             video_mask_r = video_mask.unsqueeze(0).repeat(step_truth, 1, 1)
             video_mask_r = video_mask_r.view(-1, s_visual)
 
-            _, pooled_output = self._get_cross_output(visual_output_r, video_mask_r)
+            _, pooled_output, _ = self._get_cross_output(
+                visual_output_r, video_mask_r,
+                sequence_output=sequence_output_l,
+                attention_mask=attention_mask_l,
+            )
             retrieve_logits_row = self.similarity_dense(pooled_output).squeeze(-1).view(step_truth, b_visual)
 
             retrieve_logits_list.append(retrieve_logits_row)
