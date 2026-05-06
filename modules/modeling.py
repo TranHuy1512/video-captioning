@@ -779,73 +779,112 @@ class UniVL(UniVLPreTrainedModel):
                 visual_output, video_mask, cross_output=cross_output
             )
             if self.training and getattr(self, "scst", False):
-                xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+                alpha = getattr(self.task_config, "scst_alpha", 1.0)
                 scst_loss = self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
-                alpha = getattr(self.task_config, "scst_alpha", 0.7)
-                caption_loss = alpha * xe_loss + (1 - alpha) * scst_loss
+                if alpha < 1.0:
+                    xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+                    caption_loss = alpha * xe_loss + (1 - alpha) * scst_loss
+                else:
+                    caption_loss = scst_loss
             else:
                 caption_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
 
             return caption_loss + diversity_weight * diversity_loss
 
 
+    def init_corpus_cider(self, video_sentences_dict):
+        """Initialize corpus-level CIDEr scorer with IDF from the full training set.
+
+        Call this once after creating the dataloader so that SCST reward
+        uses stable, corpus-level IDF statistics instead of noisy batch-level IDF.
+        """
+        from utils.cider_utils import CorpusCider
+        self._cider_scorer = CorpusCider()
+        self._cider_scorer.init_corpus_df(video_sentences_dict)
+        logger.info("Corpus-level CIDEr scorer initialized for SCST training.")
+
     def _get_cider_scorer(self):
         if self._cider_scorer is None:
+            # Fallback to batch-level CIDEr if corpus CIDEr was not initialized
             from pycocoevalcap.cider.cider import Cider
+            logger.warning(
+                "Using batch-level CIDEr (corpus CIDEr not initialized). "
+                "Call model.init_corpus_cider(video_sentences_dict) for better IDF."
+            )
             self._cider_scorer = Cider()
         return self._cider_scorer
 
     def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
+        """Beam-search SCST loss matching the reference mllm-video-captioner approach.
+
+        Key design choices (aligned with the reference paper, CIDEr > 80):
+        1. Deterministic beam search for candidate generation (not sampling).
+        2. Sequence scores from transition scores (actual beam log-probs).
+        3. Mean-beam reward as baseline (not greedy baseline).
+        4. Corpus-level CIDEr-D for stable IDF statistics.
+        """
         batch_size = output_caption_ids.size(0)
         pad_token_id = self.t5_tokenizer.pad_token_id
-        scst_min_length = getattr(self.task_config, "scst_min_length", 3)
 
-        # Keep hard decode constraints identical between sampled and baseline
-        # paths to reduce artificial variance in the SCST advantage signal.
-        common_generate_kwargs = dict(
-            inputs_embeds=inputs_embeds,
-            attention_mask=encoder_atts,
-            num_beams=1,
-            max_length=self.max_txt_len,
-            min_length=scst_min_length,
-            repetition_penalty=1.2,
-        )
-
-        # ── 1. Sample sequences and eval-style baseline (no grad) ──
+        # ── 1. Beam search generation (deterministic, like reference) ──
+        # Wrapped in no_grad for memory efficiency; gradients flow through
+        # the teacher-forced re-scoring in step 2 instead.
         with torch.no_grad():
             outputs = self.t5_model.generate(
-                **common_generate_kwargs,
-                do_sample=True,
-                top_p=0.9,
-                temperature=0.8,
+                inputs_embeds=inputs_embeds,
+                attention_mask=encoder_atts,
+                do_sample=False,
+                num_beams=self.scst_num_samples,
+                max_length=self.max_txt_len,
+                repetition_penalty=1.0,
+                length_penalty=1.0,
                 num_return_sequences=self.scst_num_samples,
                 return_dict_in_generate=True,
+                output_scores=True,
             )
-            generated_ids = outputs.sequences  # (B*scst_num_samples, L)
+            generated_ids = outputs.sequences  # (B * scst_num_samples, L)
 
-            baseline_ids = self.t5_model.generate(
-                **common_generate_kwargs,
-                do_sample=False,
-                length_penalty=1.0,
-            )
+        # ── 2. Teacher-forced re-scoring WITH GRAD ──
+        # generate() runs in no_grad, so transition_scores have no gradient.
+        # We re-score the generated sequences via a differentiable forward
+        # pass to obtain log p(y|x) that backprop can flow through.
+        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
+        repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
 
-        # ── 2. Compute CIDEr reward using ALL GT references (no grad) ──
+        decoder_input_ids = generated_ids[:, :-1].contiguous()
+        labels = generated_ids[:, 1:].contiguous()
+
+        score_outputs = self.t5_model(
+            inputs_embeds=repeated_inputs_embeds,
+            attention_mask=repeated_encoder_atts,
+            decoder_input_ids=decoder_input_ids,
+            return_dict=True,
+        )
+
+        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)
+        selected_log_probs = token_log_probs.gather(
+            dim=-1, index=labels.unsqueeze(-1)
+        ).squeeze(-1)
+
+        labels_mask = labels.ne(pad_token_id)
+        selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
+        output_length = labels_mask.sum(dim=1).clamp(min=1)
+        sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(
+            batch_size, self.scst_num_samples
+        )
+
+        # ── 3. CIDEr reward (no grad needed) ──
         with torch.no_grad():
             caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             caps_gen = [t.strip() for t in caps_gen]
-            caps_baseline = self.t5_tokenizer.batch_decode(baseline_ids, skip_special_tokens=True)
-            caps_baseline = [t.strip() for t in caps_baseline]
 
             # Build GT references for CIDEr computation
             if gt_refs is not None and len(gt_refs) == batch_size:
-                # gt_refs: list of list of strings, e.g. [["cap1", "cap2", ...], ...]
-                # Each element has all reference captions for that video (e.g. 20 for MSRVTT)
                 caps_gt_repeated = []
                 for sample_refs in gt_refs:
                     for _ in range(self.scst_num_samples):
-                        caps_gt_repeated.append(sample_refs)  # all refs for this video
+                        caps_gt_repeated.append(sample_refs)
             else:
-                # Fallback: decode single GT from t5_output_caption_ids (legacy behavior)
                 gt_ids = t5_output_caption_ids if t5_output_caption_ids is not None else output_caption_ids
                 gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
                 caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
@@ -857,42 +896,13 @@ class UniVL(UniVLPreTrainedModel):
             reward = self._get_cider_scorer().compute_score(caps_gt_tok, caps_gen_tok)[1].astype(np.float32)
             reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
 
-            if gt_refs is not None and len(gt_refs) == batch_size:
-                caps_gt_baseline = gt_refs
-            else:
-                caps_gt_baseline = [[c] for c in caps_gt]
-            caps_gt_baseline_tok, caps_baseline_tok = tokenize(caps_gt_baseline, caps_baseline)
-            reward_baseline = self._get_cider_scorer().compute_score(
-                caps_gt_baseline_tok, caps_baseline_tok
-            )[1].astype(np.float32)
-            reward_baseline = torch.from_numpy(reward_baseline).to(inputs_embeds.device).view(batch_size, 1)
-            advantage = (reward - reward_baseline)  # (B, scst_num_samples)
+            # ── 4. Mean-beam baseline (reference approach) ──
+            reward_baseline = torch.mean(reward, dim=-1, keepdim=True)
+            advantage = reward - reward_baseline  # (B, scst_num_samples)
 
-        # ── 3. Forward pass WITH GRAD for log probs ──
-        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)   # (B*scst_num_samples, L, H)
-        repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)     # (B*scst_num_samples, L)
-
-        decoder_input_ids = generated_ids[:, :-1].contiguous()   # (B*scst_num_samples, L-1)
-        labels = generated_ids[:, 1:].contiguous()                # (B*scst_num_samples, L-1)
-
-        score_outputs = self.t5_model(
-            inputs_embeds=repeated_inputs_embeds,
-            attention_mask=repeated_encoder_atts,
-            decoder_input_ids=decoder_input_ids,
-            return_dict=True,
-        )
-
-        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)   # (B*scst_num_samples, L-1, vocab)
-        selected_log_probs = token_log_probs.gather(
-            dim=-1, index=labels.unsqueeze(-1)
-        ).squeeze(-1)                                                    # (B*scst_num_samples, L-1)
-
-        labels_mask = labels.ne(pad_token_id)
-        selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
-        output_length = labels_mask.sum(dim=1).clamp(min=1)
-        sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(batch_size, self.scst_num_samples)
-
-        # ── 4. SCST loss ──
+        # ── 5. SCST policy-gradient loss ──
+        # L = - E[ log p(y|x) * (R(y) - b) ]
+        # sequences_scores carries gradients from step 2; advantage is detached.
         loss = -(sequences_scores * advantage.detach())
         return loss.mean()
 

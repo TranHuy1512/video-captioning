@@ -53,13 +53,14 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.sentences_dict = {}
         self.video_sentences_dict = defaultdict(list)
         if split_type == "train" and scst:
-            # SCST mode: one sample per video (6,513); caption is randomly
-            # picked in __getitem__ from video_sentences_dict each time.
+            # SCST mode: expand all (video, caption) pairs so that the same
+            # video appears with different GT captions across batches/epochs.
+            # Within a single forward step, each beam is scored against that
+            # sample's single GT caption (duplicated beam_size times).
             for itm in self.data['sentences']:
                 if itm['video_id'] in choiced_video_ids:
+                    self.sentences_dict[len(self.sentences_dict)] = (itm['video_id'], itm['caption'])
                     self.video_sentences_dict[itm['video_id']].append(itm['caption'])
-            for vid in choiced_video_ids:
-                self.sentences_dict[len(self.sentences_dict)] = (vid, None)
         elif split_type == "train":  # XE mode: expand all sentences
             for itm in self.data['sentences']:
                 if itm['video_id'] in choiced_video_ids:

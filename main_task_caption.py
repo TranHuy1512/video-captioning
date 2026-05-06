@@ -95,10 +95,12 @@ def get_args(description='UniVL on Caption Task'):
 
     parser.add_argument('--freeze_vit', action='store_true', help="Freeze vision encoder parameters.")
     parser.add_argument('--scst', action='store_true', help="Enable SCST training for caption loss.")
+    parser.add_argument('--scst_alpha', type=float, default=1.0,
+                        help="SCST loss weight. 1.0 = pure SCST (reference paper), <1.0 = mix with XE.")
     parser.add_argument('--eval_beam_size', type=int, default=None,
                         help="Beam size used for deterministic caption generation during eval/test.")
     parser.add_argument('--scst_num_samples', type=int, default=None,
-                        help="Number of sampled captions per video for SCST training.")
+                        help="Number of beam candidates per video for SCST training.")
     parser.add_argument('--beam_size', type=int, default=None,
                         help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
     parser.add_argument('--t5_model', type=str, default='google/flan-t5-xl', help="T5 model name.")
@@ -137,7 +139,7 @@ def get_args(description='UniVL on Caption Task'):
     if args.eval_beam_size is None:
         args.eval_beam_size = args.beam_size if args.beam_size is not None else 5
     if args.scst_num_samples is None:
-        args.scst_num_samples = args.beam_size if args.beam_size is not None else 10
+        args.scst_num_samples = args.beam_size if args.beam_size is not None else 5
     # Keep the old attribute for backwards compatibility with older scripts/utilities.
     if args.beam_size is None:
         args.beam_size = args.eval_beam_size
@@ -184,6 +186,11 @@ def main():
         if args.init_model:
             coef_lr = 1.0
         optimizer, scheduler, model = prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, args.local_rank, coef_lr=coef_lr)
+
+        # Initialize corpus-level CIDEr for SCST training
+        if args.scst and hasattr(train_dataloader.dataset, 'video_sentences_dict'):
+            scst_model = model.module if hasattr(model, 'module') else model
+            scst_model.init_corpus_cider(train_dataloader.dataset.video_sentences_dict)
 
 
         if args.local_rank == 0:
