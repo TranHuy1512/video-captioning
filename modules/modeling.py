@@ -36,7 +36,7 @@ from modules.module_bert import BertModel, BertConfig, BertOnlyMLMHead
 from modules.module_visual import VisualModel, VisualConfig, VisualOnlyMLMHead
 from modules.module_cross import CrossModel, CrossConfig
 from modules.module_decoder import DecoderConfig
-from modules.blip2 import Blip2Base
+from modules.blip2 import Blip2Base, disabled_train
 # from modules.modeling_t5 import T5Config, T5ForConditionalGeneration
 from transformers import T5Config, T5ForConditionalGeneration
 
@@ -390,6 +390,8 @@ class UniVL(UniVLPreTrainedModel):
         if self.freeze_vit:
             for param in self.visual.parameters():
                 param.requires_grad = False
+            self.visual = self.visual.eval()
+            self.visual.train = disabled_train
             show_log(task_config, "Freeze vision encoder.")
         visual_word_embeddings_weight = self.visual.embeddings.word_embeddings.weight
         # <=== End of Video Encoder
@@ -421,9 +423,9 @@ class UniVL(UniVLPreTrainedModel):
             self.Qformer.cls = None
             self.Qformer.bert.embeddings.word_embeddings = None
             self.Qformer.bert.embeddings.position_embeddings = None
-            # for layer in self.Qformer.bert.encoder.layer:
-            #     layer.output = None
-            #     layer.intermediate = None
+            for layer in self.Qformer.bert.encoder.layer:
+                layer.output = None
+                layer.intermediate = None
             # <=== End of Cross Encoder
 
             if self.train_sim_after_cross is False:
@@ -817,7 +819,7 @@ class UniVL(UniVLPreTrainedModel):
         """Penalise high cosine similarity between different Q-Former query tokens.
 
         This encourages the 32 query tokens to specialise to different temporal/
-        semantic aspects of the video rather than collapsing to near-identical
+        semantic aspects of the video instead of collapsing to near-identical
         representations.
 
         Args:
@@ -829,9 +831,9 @@ class UniVL(UniVLPreTrainedModel):
         q = F.normalize(cross_output.float(), dim=-1)          # [B, Q, H]
         sim = torch.bmm(q, q.transpose(1, 2))                  # [B, Q, Q]  values in [-1, 1]
         Q = sim.size(1)
-        # Mask the diagonal (self-similarity = 1, always; we only penalise cross-token sim)
+        # Mask self-similarity and penalize only positive off-diagonal similarity.
         off_diag = 1.0 - torch.eye(Q, device=sim.device).unsqueeze(0)  # [1, Q, Q]
-        diversity_loss = (sim * off_diag).sum() / (off_diag.sum() * sim.size(0))
+        diversity_loss = (F.relu(sim) * off_diag).sum() / (off_diag.sum() * sim.size(0))
         return diversity_loss.to(cross_output.dtype)
 
     def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
@@ -852,7 +854,7 @@ class UniVL(UniVLPreTrainedModel):
             cross_output, _ = self._get_cross_output(visual_output, video_mask)
 
             # Diversity regularization: only during training, weight configurable
-            diversity_weight = getattr(self.task_config, "qformer_diversity_weight", 0.05)
+            diversity_weight = getattr(self.task_config, "qformer_diversity_weight", 0.0)
             diversity_loss = (
                 self._compute_diversity_loss(cross_output)
                 if (self.training and diversity_weight > 0.0)
@@ -867,7 +869,7 @@ class UniVL(UniVLPreTrainedModel):
                 scst_loss = self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
                 if alpha < 1.0:
                     xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
-                    caption_loss = alpha * xe_loss + (1 - alpha) * scst_loss
+                    caption_loss = alpha * scst_loss + (1 - alpha) * xe_loss
                 else:
                     caption_loss = scst_loss
             else:
