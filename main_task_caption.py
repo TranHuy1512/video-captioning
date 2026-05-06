@@ -122,12 +122,18 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--lora_r', type=int, default=16, help="LoRA rank.")
     parser.add_argument('--lora_alpha', type=int, default=32, help="LoRA alpha.")
     parser.add_argument('--lora_dropout', type=float, default=0.05, help="LoRA dropout.")
+    parser.add_argument('--lora_target_modules', type=str, default='q,v',
+                        help="Comma-separated LoRA target module names (default: 'q,v'). "
+                             "Use 'q,k,v,o' to match the old 4-module config.")
 
     parser.add_argument('--stage_two', action='store_true', help="Whether training with decoder.")
     args = parser.parse_args()
 
     if args.local_rank is None:
         args.local_rank = int(os.environ.get("LOCAL_RANK", 0))
+
+    # Parse lora_target_modules from comma-separated string to list
+    args.lora_target_modules = [m.strip() for m in args.lora_target_modules.split(',') if m.strip()]
 
     if args.gradient_accumulation_steps < 1:
         raise ValueError("Invalid gradient_accumulation_steps parameter: {}, should be >= 1".format(

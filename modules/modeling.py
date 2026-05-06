@@ -241,6 +241,88 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             )
             return normalized_state
 
+        if has_lora_t5_keys and target_uses_lora:
+            # Both checkpoint and new model use LoRA, but possibly with different
+            # target_modules (e.g. ckpt=['q','k','v','o'], model=['q','v']).
+            # Detect which modules had LoRA in the checkpoint.
+            ckpt_lora_modules = set()
+            for key in state_dict.keys():
+                if '.lora_A.' in key and key.startswith('t5_model.base_model.model.'):
+                    module_name = key.split('.lora_A.')[0].split('.')[-1]
+                    ckpt_lora_modules.add(module_name)
+
+            new_target_modules = set(
+                getattr(task_config, 'lora_target_modules', ['q', 'v'])
+                if task_config is not None else ['q', 'v']
+            )
+            excess_modules = ckpt_lora_modules - new_target_modules
+
+            if not excess_modules:
+                # Same or compatible targets — no structural conversion needed.
+                return state_dict
+
+            # Collect LoRA tensors for excess modules so we can merge them.
+            lora_a_excess = {}
+            lora_b_excess = {}
+            for key, value in state_dict.items():
+                for mod in excess_modules:
+                    if f'.{mod}.lora_A.' in key:
+                        base_key = key.split(f'.{mod}.lora_A.')[0] + f'.{mod}.base_layer.weight'
+                        lora_a_excess[base_key] = value
+                    elif f'.{mod}.lora_B.' in key:
+                        base_key = key.split(f'.{mod}.lora_B.')[0] + f'.{mod}.base_layer.weight'
+                        lora_b_excess[base_key] = value
+
+            scaling = 1.0
+            if task_config is not None:
+                _r = getattr(task_config, 'lora_r', 0)
+                _a = getattr(task_config, 'lora_alpha', 0)
+                if _r:
+                    scaling = float(_a) / float(_r)
+
+            state_dict_cls2 = state_dict.__class__
+            harmonised = state_dict_cls2()
+            _meta2 = getattr(state_dict, '_metadata', None)
+            if _meta2 is not None:
+                harmonised._metadata = _meta2
+
+            excess_converted = 0
+            excess_dropped = 0
+            for key, value in state_dict.items():
+                # Drop adapter tensors for excess modules.
+                is_excess_adapter = any(
+                    f'.{mod}.lora_A.' in key or f'.{mod}.lora_B.' in key
+                    for mod in excess_modules
+                )
+                if is_excess_adapter:
+                    excess_dropped += 1
+                    continue
+
+                # For excess modules, rename base_layer.weight → weight and merge LoRA.
+                new_key = key
+                for mod in excess_modules:
+                    old_pat = f'.{mod}.base_layer.weight'
+                    new_pat = f'.{mod}.weight'
+                    if old_pat in key:
+                        new_key = key.replace(old_pat, new_pat)
+                        if key in lora_a_excess and key in lora_b_excess:
+                            a_w = lora_a_excess[key]
+                            b_w = lora_b_excess[key]
+                            delta = torch.matmul(b_w.float(), a_w.float()) * scaling
+                            value = value + delta.to(device=value.device, dtype=value.dtype)
+                        excess_converted += 1
+                        break
+
+                harmonised[new_key] = value
+
+            show_log(
+                task_config,
+                "Harmonised LoRA ckpt (excess modules {}): {} base keys merged, {} adapter tensors dropped.".format(
+                    excess_modules, excess_converted, excess_dropped
+                ),
+            )
+            return harmonised
+
         return state_dict
 
 class NormalizeVideo(nn.Module):
@@ -377,13 +459,15 @@ class UniVL(UniVLPreTrainedModel):
                 lora_r = getattr(self.task_config, "lora_r", 16)
                 lora_alpha = getattr(self.task_config, "lora_alpha", 32)
                 lora_dropout = getattr(self.task_config, "lora_dropout", 0.05)
+                # Read target_modules from task_config (default ['q','v'] matches reference).
+                lora_target_modules = getattr(self.task_config, 'lora_target_modules', ['q', 'v'])
                 peft_config = LoraConfig(
                     task_type=TaskType.SEQ_2_SEQ_LM,
                     inference_mode=False,
                     r=lora_r,
                     lora_alpha=lora_alpha,
                     lora_dropout=lora_dropout,
-                    target_modules=['q','k','v','o']
+                    target_modules=lora_target_modules,
                 )
 
                 if lora:
@@ -815,67 +899,48 @@ class UniVL(UniVLPreTrainedModel):
         return self._cider_scorer
 
     def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
-        """Beam-search SCST loss matching the reference mllm-video-captioner approach.
+        """Beam-search SCST loss aligned with the reference (our_blip2_t5.py, CIDEr > 80).
 
-        Key design choices (aligned with the reference paper, CIDEr > 80):
-        1. Deterministic beam search for candidate generation (not sampling).
-        2. Sequence scores from transition scores (actual beam log-probs).
-        3. Mean-beam reward as baseline (not greedy baseline).
-        4. Corpus-level CIDEr-D for stable IDF statistics.
+        Key design choices:
+        1. generate() is NOT wrapped in torch.no_grad() — outputs.scores retains the
+           autograd graph so compute_transition_scores returns *differentiable* log-probs.
+        2. Sequence scores from compute_transition_scores (actual beam log-probs).
+        3. output_length counted via transition_scores < 0 (pad positions get 0.0). [Fix 5]
+        4. Mean-beam reward baseline; advantage detached from gradient.
         """
-        batch_size = output_caption_ids.size(0)
+        batch_size = inputs_embeds.size(0)
         pad_token_id = self.t5_tokenizer.pad_token_id
 
-        # ── 1. Beam search generation (deterministic, like reference) ──
-        # Wrapped in no_grad for memory efficiency; gradients flow through
-        # the teacher-forced re-scoring in step 2 instead.
-        with torch.no_grad():
-            outputs = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
-                do_sample=False,
-                num_beams=self.scst_num_samples,
-                max_length=self.max_txt_len,
-                repetition_penalty=1.0,
-                length_penalty=1.0,
-                num_return_sequences=self.scst_num_samples,
-                return_dict_in_generate=True,
-                output_scores=True,
-            )
-            generated_ids = outputs.sequences  # (B * scst_num_samples, L)
-
-        # ── 2. Teacher-forced re-scoring WITH GRAD ──
-        # generate() runs in no_grad, so transition_scores have no gradient.
-        # We re-score the generated sequences via a differentiable forward
-        # pass to obtain log p(y|x) that backprop can flow through.
-        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
-        repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
-
-        decoder_input_ids = generated_ids[:, :-1].contiguous()
-        labels = generated_ids[:, 1:].contiguous()
-
-        score_outputs = self.t5_model(
-            inputs_embeds=repeated_inputs_embeds,
-            attention_mask=repeated_encoder_atts,
-            decoder_input_ids=decoder_input_ids,
-            return_dict=True,
+        # ── 1. Beam search WITH gradient graph (no torch.no_grad) ──
+        # CRITICAL: do NOT wrap in no_grad. outputs.scores must retain the autograd
+        # graph so that compute_transition_scores can return differentiable scores.
+        outputs = self.t5_model.generate(
+            inputs_embeds=inputs_embeds,
+            attention_mask=encoder_atts,
+            do_sample=False,
+            num_beams=self.scst_num_samples,
+            max_length=self.max_txt_len,
+            repetition_penalty=1.0,
+            length_penalty=1.0,
+            num_return_sequences=self.scst_num_samples,
+            return_dict_in_generate=True,
+            output_scores=True,
         )
 
-        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)
-        selected_log_probs = token_log_probs.gather(
-            dim=-1, index=labels.unsqueeze(-1)
-        ).squeeze(-1)
-
-        labels_mask = labels.ne(pad_token_id)
-        selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
-        output_length = labels_mask.sum(dim=1).clamp(min=1)
-        sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(
-            batch_size, self.scst_num_samples
+        # ── 2. Differentiable sequence scores via transition scores ──
+        # compute_transition_scores uses the same outputs.scores tensors that
+        # retain the graph → real gradients flow to LoRA weights and t5_proj.
+        # Pad positions receive score 0.0; only tokens with score < 0 are real. [Fix 5]
+        transition_scores = self.t5_model.compute_transition_scores(
+            outputs.sequences, outputs.scores, outputs.beam_indices, normalize_logits=False
         )
+        output_length = torch.sum(transition_scores < 0, dim=1).clamp(min=1)
+        sequences_scores = transition_scores.sum(dim=1) / output_length.float()
+        sequences_scores = sequences_scores.view(batch_size, self.scst_num_samples)
 
         # ── 3. CIDEr reward (no grad needed) ──
         with torch.no_grad():
-            caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+            caps_gen = self.t5_tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True)
             caps_gen = [t.strip() for t in caps_gen]
 
             # Build GT references for CIDEr computation
@@ -901,9 +966,8 @@ class UniVL(UniVLPreTrainedModel):
             advantage = reward - reward_baseline  # (B, scst_num_samples)
 
         # ── 5. SCST policy-gradient loss ──
-        # L = - E[ log p(y|x) * (R(y) - b) ]
-        # sequences_scores carries gradients from step 2; advantage is detached.
-        loss = -(sequences_scores * advantage.detach())
+        # sequences_scores has real gradients (from step 2); advantage is detached.
+        loss = -(sequences_scores) * advantage.detach()
         return loss.mean()
 
     def generate_caption_ids(self, visual_output, video_mask, num_beams=None, max_length=None):
