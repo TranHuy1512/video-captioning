@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 import torch
-from torch.utils.data import (SequentialSampler)
+from torch.utils.data import RandomSampler, SequentialSampler
 import numpy as np
 import random
 import os
@@ -30,9 +30,13 @@ from dataloaders.dataloader_youcook_caption import Youcook_Caption_DataLoader
 from dataloaders.dataloader_msrvtt_caption import MSRVTT_Caption_DataLoader
 from util import get_logger
 
-# Initialize distributed training only if environment is properly configured
-if not torch.distributed.is_initialized():
-    torch.distributed.init_process_group(backend="nccl")
+def _maybe_init_distributed():
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    if world_size > 1 and not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(backend="nccl")
+
+
+_maybe_init_distributed()
 
 global logger
 
@@ -97,8 +101,8 @@ def get_args(description='UniVL on Caption Task - Test Visual Encoder'):
     parser.add_argument("--local_rank", default=None, type=int, help="distribted training")
     parser.add_argument('--coef_lr', type=float, default=0.1, help='coefficient for bert branch.')
     parser.add_argument('--lr_qformer', type=float, default=5e-5, help='Learning rate for QFormer parameters.')
-    parser.add_argument('--lr_lora', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
-                        help='Learning rate for T5 LoRA/decoder parameters.')
+    parser.add_argument('--lr_decoder', type=float, default=1e-5,
+                        help='Learning rate for decoder parameters.')
     parser.add_argument('--use_mil', action='store_true', help="Whether use MIL as Miech et. al. (2020).")
     parser.add_argument('--sampled_use_mil', action='store_true', help="Whether use MIL, has a high priority than use_mil.")
 
@@ -137,8 +141,9 @@ def set_seed_logger(args):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    world_size = torch.distributed.get_world_size()
-    torch.cuda.set_device(args.local_rank)
+    world_size = torch.distributed.get_world_size() if torch.distributed.is_initialized() else 1
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.local_rank)
     args.world_size = world_size
 
     if not os.path.exists(args.output_dir):
@@ -158,9 +163,12 @@ def init_device(args, local_rank):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu", local_rank)
 
-    n_gpu = torch.cuda.device_count()
+    n_gpu = torch.cuda.device_count() if torch.distributed.is_initialized() else int(torch.cuda.is_available())
     logger.info("device: {} n_gpu: {}".format(device, n_gpu))
     args.n_gpu = n_gpu
+
+    if args.n_gpu == 0:
+        raise ValueError("CUDA device is required for this training pipeline.")
 
     if args.batch_size % args.n_gpu != 0 or args.batch_size_val % args.n_gpu != 0:
         raise ValueError("Invalid batch_size/batch_size_val and n_gpu parameter: {}%{} and {}%{}, should be == 0".format(
@@ -241,39 +249,39 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
     def is_qformer_param(name):
         return name.startswith(("Qformer.", "query_tokens", "qformer_visual_proj."))
 
-    def is_t5_decoder_param(name):
-        return name.startswith(("t5_model.", "t5_proj."))
+    def is_decoder_param(name):
+        return name.startswith(("decoder.", "decoder_cross_proj."))
 
     def is_bert_param(name):
         return name.startswith("bert.")
 
     def is_other_param(name):
-        return not (is_bert_param(name) or is_qformer_param(name) or is_t5_decoder_param(name))
+        return not (is_bert_param(name) or is_qformer_param(name) or is_decoder_param(name))
 
     lr_qformer = getattr(args, "lr_qformer", args.lr)
-    lr_lora = getattr(args, "lr_lora", args.lr)
+    lr_decoder = getattr(args, "lr_decoder", args.lr)
 
     no_decay_param_tp = [(n, p) for n, p in param_optimizer if not any(nd in n for nd in no_decay)]
     decay_param_tp = [(n, p) for n, p in param_optimizer if any(nd in n for nd in no_decay)]
 
     no_decay_bert_param_tp = [(n, p) for n, p in no_decay_param_tp if is_bert_param(n)]
     no_decay_qformer_param_tp = [(n, p) for n, p in no_decay_param_tp if is_qformer_param(n)]
-    no_decay_t5_decoder_param_tp = [(n, p) for n, p in no_decay_param_tp if is_t5_decoder_param(n)]
+    no_decay_decoder_param_tp = [(n, p) for n, p in no_decay_param_tp if is_decoder_param(n)]
     no_decay_other_param_tp = [(n, p) for n, p in no_decay_param_tp if is_other_param(n)]
 
     decay_bert_param_tp = [(n, p) for n, p in decay_param_tp if is_bert_param(n)]
     decay_qformer_param_tp = [(n, p) for n, p in decay_param_tp if is_qformer_param(n)]
-    decay_t5_decoder_param_tp = [(n, p) for n, p in decay_param_tp if is_t5_decoder_param(n)]
+    decay_decoder_param_tp = [(n, p) for n, p in decay_param_tp if is_decoder_param(n)]
     decay_other_param_tp = [(n, p) for n, p in decay_param_tp if is_other_param(n)]
 
     optimizer_grouped_parameters = [
         {'params': [p for n, p in no_decay_bert_param_tp], 'weight_decay': 0.01, 'lr': args.lr * coef_lr},
         {'params': [p for n, p in no_decay_qformer_param_tp], 'weight_decay': 0.01, 'lr': lr_qformer},
-        {'params': [p for n, p in no_decay_t5_decoder_param_tp], 'weight_decay': 0.01, 'lr': lr_lora},
+        {'params': [p for n, p in no_decay_decoder_param_tp], 'weight_decay': 0.01, 'lr': lr_decoder},
         {'params': [p for n, p in no_decay_other_param_tp], 'weight_decay': 0.01},
         {'params': [p for n, p in decay_bert_param_tp], 'weight_decay': 0.0, 'lr': args.lr * coef_lr},
         {'params': [p for n, p in decay_qformer_param_tp], 'weight_decay': 0.0, 'lr': lr_qformer},
-        {'params': [p for n, p in decay_t5_decoder_param_tp], 'weight_decay': 0.0, 'lr': lr_lora},
+        {'params': [p for n, p in decay_decoder_param_tp], 'weight_decay': 0.0, 'lr': lr_decoder},
         {'params': [p for n, p in decay_other_param_tp], 'weight_decay': 0.0}
     ]
 
@@ -282,8 +290,9 @@ def prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, loc
                          schedule='warmup_linear', t_total=num_train_optimization_steps, weight_decay=0.01,
                          max_grad_norm=1.0)
 
-    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank],
-                                                      output_device=local_rank, find_unused_parameters=True)
+    if torch.distributed.is_initialized():
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank],
+                                                          output_device=local_rank, find_unused_parameters=True)
 
     return optimizer, scheduler, model
 
@@ -298,7 +307,11 @@ def dataloader_youcook_train(args, tokenizer):
         max_frames=args.max_frames,
     )
 
-    train_sampler = torch.utils.data.distributed.DistributedSampler(youcook_dataset)
+    train_sampler = (
+        torch.utils.data.distributed.DistributedSampler(youcook_dataset)
+        if torch.distributed.is_initialized()
+        else RandomSampler(youcook_dataset)
+    )
     dataloader = DataLoader(
         youcook_dataset,
         batch_size=args.batch_size // args.n_gpu,
@@ -347,7 +360,11 @@ def dataloader_msrvtt_train(args, tokenizer):
         split_type="train",
     )
 
-    train_sampler = torch.utils.data.distributed.DistributedSampler(msrvtt_dataset)
+    train_sampler = (
+        torch.utils.data.distributed.DistributedSampler(msrvtt_dataset)
+        if torch.distributed.is_initialized()
+        else RandomSampler(msrvtt_dataset)
+    )
     dataloader = DataLoader(
         msrvtt_dataset,
         batch_size=args.batch_size // args.n_gpu,
@@ -834,7 +851,8 @@ def main():
         best_output_model_file = None
         global_step = 0
         for epoch in range(args.epochs):
-            train_sampler.set_epoch(epoch)
+            if hasattr(train_sampler, "set_epoch"):
+                train_sampler.set_epoch(epoch)
 
             tr_loss, global_step = train_epoch(epoch, args, model, train_dataloader, tokenizer, device, n_gpu, optimizer,
                                                scheduler, global_step, nlgEvalObj=nlgEvalObj, local_rank=args.local_rank)

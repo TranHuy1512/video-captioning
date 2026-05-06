@@ -15,8 +15,9 @@ def set_seed_logger(args):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    world_size = torch.distributed.get_world_size()
-    torch.cuda.set_device(args.local_rank)
+    world_size = torch.distributed.get_world_size() if torch.distributed.is_initialized() else 1
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.local_rank)
     args.world_size = world_size
 
     if not os.path.exists(args.output_dir):
@@ -35,9 +36,12 @@ def set_seed_logger(args):
 def init_device(args, local_rank, logger):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu", local_rank)
 
-    n_gpu = torch.cuda.device_count()
+    n_gpu = torch.cuda.device_count() if torch.distributed.is_initialized() else int(torch.cuda.is_available())
     logger.info("device: {} n_gpu: {}".format(device, n_gpu))
     args.n_gpu = n_gpu
+
+    if args.n_gpu == 0:
+        raise ValueError("CUDA device is required for this training pipeline.")
 
     if args.batch_size % args.n_gpu != 0 or args.batch_size_val % args.n_gpu != 0:
         raise ValueError("Invalid batch_size/batch_size_val and n_gpu parameter: {}%{} and {}%{}, should be == 0".format(

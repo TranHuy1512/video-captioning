@@ -20,48 +20,23 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
-import numpy as np
-import itertools
-import re
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers import T5TokenizerFast
 
 
 from modules.until_module import PreTrainedModel, LayerNorm, CrossEn, MILNCELoss, MaxMarginRankingLoss
 from modules.module_bert import BertModel, BertConfig, BertOnlyMLMHead
 from modules.module_visual import VisualModel, VisualConfig, VisualOnlyMLMHead
 from modules.module_cross import CrossModel, CrossConfig
-from modules.module_decoder import DecoderConfig
+from modules.module_decoder import DecoderConfig, DecoderModel
 from modules.blip2 import Blip2Base
-# from modules.modeling_t5 import T5Config, T5ForConditionalGeneration
-from transformers import T5Config, T5ForConditionalGeneration
-
-
-from peft import LoraConfig, TaskType, get_peft_model
+from modules.beam import Beam
+from modules.tokenization import BertTokenizer
 
 logger = logging.getLogger(__name__)
-
-
-def tokenize(refs, cands, no_op=False):
-    from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-
-    tokenizer = PTBTokenizer()
-
-    if no_op:
-        refs = {idx: [r for r in c_refs] for idx, c_refs in enumerate(refs)}
-        cands = {idx: [c] for idx, c in enumerate(cands)}
-    else:
-        refs = {idx: [{'caption': r} for r in c_refs] for idx, c_refs in enumerate(refs)}
-        cands = {idx: [{'caption': c}] for idx, c in enumerate(cands)}
-
-        refs = tokenizer.tokenize(refs)
-        cands = tokenizer.tokenize(cands)
-
-    return refs, cands
 
 
 class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
@@ -112,17 +87,17 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
     @staticmethod
     def _filter_init_model_state_dict(state_dict, task_config=None):
-        state_dict = UniVLPreTrainedModel._normalize_t5_checkpoint_state_dict(
-            state_dict, task_config=task_config
-        )
         allowed_prefixes = (
             "bert.",
             "visual.",
+            "cross.",
+            "decoder.",
             "Qformer.",
             "query_tokens",
             "qformer_visual_proj.",
-            "t5_model.",
-            "t5_proj.",
+            "similarity_dense.",
+            "cls.",
+            "cls_visual.",
             "normalize_video.",
         )
         filtered_state_dict = state_dict.__class__(
@@ -141,107 +116,6 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             )
         )
         return filtered_state_dict
-
-    @staticmethod
-    def _normalize_t5_checkpoint_state_dict(state_dict, task_config=None):
-        has_lora_t5_keys = any(
-            key.startswith("t5_model.base_model.model.") for key in state_dict.keys()
-        )
-        target_uses_lora = bool(getattr(task_config, "lora", False)) if task_config is not None else False
-
-        if not has_lora_t5_keys and not target_uses_lora:
-            return state_dict
-
-        state_dict_cls = state_dict.__class__
-        normalized_state = state_dict_cls()
-        metadata = getattr(state_dict, "_metadata", None)
-        if metadata is not None:
-            normalized_state._metadata = metadata
-
-        converted_key_count = 0
-        merged_lora_count = 0
-        dropped_lora_tensor_count = 0
-
-        attention_weight_pattern = re.compile(r"(\.(?:q|k|v|o))\.(weight|bias)$")
-
-        def base_to_peft_key(key):
-            if not key.startswith("t5_model."):
-                return key
-
-            suffix = key[len("t5_model."):]
-            new_key = "t5_model.base_model.model." + suffix
-            return attention_weight_pattern.sub(r"\1.base_layer.\2", new_key)
-
-        if has_lora_t5_keys and not target_uses_lora:
-            lora_a_tensors = {}
-            lora_b_tensors = {}
-
-            for key, value in state_dict.items():
-                new_key = key
-                if key.startswith("t5_model.base_model.model."):
-                    new_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
-                    if ".base_layer." in new_key:
-                        new_key = new_key.replace(".base_layer.", ".")
-                    converted_key_count += int(new_key != key)
-
-                if ".lora_A." in key:
-                    base_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
-                    base_key = base_key.split(".lora_A.", 1)[0] + ".weight"
-                    lora_a_tensors[base_key] = value
-                    dropped_lora_tensor_count += 1
-                    continue
-
-                if ".lora_B." in key:
-                    base_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
-                    base_key = base_key.split(".lora_B.", 1)[0] + ".weight"
-                    lora_b_tensors[base_key] = value
-                    dropped_lora_tensor_count += 1
-                    continue
-
-                normalized_state[new_key] = value
-
-            scaling = 1.0
-            if task_config is not None:
-                lora_r = getattr(task_config, "lora_r", 0)
-                lora_alpha = getattr(task_config, "lora_alpha", 0)
-                if lora_r:
-                    scaling = float(lora_alpha) / float(lora_r)
-
-            for base_key, a_weight in lora_a_tensors.items():
-                b_weight = lora_b_tensors.get(base_key)
-                if b_weight is None or base_key not in normalized_state:
-                    continue
-
-                base_weight = normalized_state[base_key]
-                delta = torch.matmul(b_weight.float(), a_weight.float()) * scaling
-                normalized_state[base_key] = base_weight + delta.to(
-                    device=base_weight.device, dtype=base_weight.dtype
-                )
-                merged_lora_count += 1
-
-            show_log(
-                task_config,
-                "Normalized LoRA T5 checkpoint for non-LoRA load: converted {} keys, merged {} LoRA updates, dropped {} adapter tensors.".format(
-                    converted_key_count, merged_lora_count, dropped_lora_tensor_count
-                ),
-            )
-            return normalized_state
-
-        if target_uses_lora and not has_lora_t5_keys:
-            for key, value in state_dict.items():
-                new_key = base_to_peft_key(key)
-                converted_key_count += int(new_key != key)
-                normalized_state[new_key] = value
-
-            show_log(
-                task_config,
-                "Normalized non-LoRA T5 checkpoint for LoRA load: converted {} keys.".format(
-                    converted_key_count
-                ),
-            )
-            return normalized_state
-
-        return state_dict
 
 class NormalizeVideo(nn.Module):
     def __init__(self, task_config):
@@ -275,6 +149,11 @@ class UniVL(UniVLPreTrainedModel):
         self.task_config = task_config
         self.ignore_video_index = -1
 
+        self.tokenizer = BertTokenizer.from_pretrained(
+            task_config.bert_model,
+            do_lower_case=getattr(task_config, "do_lower_case", False),
+        )
+
         assert self.task_config.max_words <= bert_config.max_position_embeddings
         assert self.task_config.max_words <= decoder_config.max_target_embeddings
         assert self.task_config.max_frames <= visual_config.max_position_embeddings
@@ -298,6 +177,7 @@ class UniVL(UniVLPreTrainedModel):
                                    self.task_config, "text_num_hidden_layers")
         self.bert = BertModel(bert_config)
         bert_word_embeddings_weight = self.bert.embeddings.word_embeddings.weight
+        bert_position_embeddings_weight = self.bert.embeddings.position_embeddings.weight
         # <=== End of Text Encoder
 
         # Video Encoder ===>
@@ -346,53 +226,35 @@ class UniVL(UniVLPreTrainedModel):
 
             if self.train_sim_after_cross is False:
                 # Decoder ===>
-                self.scst = getattr(self.task_config, "scst", False)
                 self.eval_beam_size = getattr(
                     self.task_config,
                     "eval_beam_size",
                     getattr(self.task_config, "beam_size", 5),
                 )
-                self.scst_num_samples = getattr(
-                    self.task_config,
-                    "scst_num_samples",
-                    getattr(self.task_config, "beam_size", self.eval_beam_size),
-                )
-                # Backwards compatibility for older call sites/check scripts.
                 self.beam_size = self.eval_beam_size
-                self.max_txt_len = getattr(self.task_config, "max_txt_len", 32)
-                self.prompt = " A video of"
 
-                t5_model_name = getattr(self.task_config, "t5_model", "google/flan-t5-xl")
-                self.t5_tokenizer = T5TokenizerFast.from_pretrained(t5_model_name)
-                t5_config = T5Config.from_pretrained(t5_model_name)
-                t5_config.dense_act_fn = "gelu"
-                self.t5_model = T5ForConditionalGeneration.from_pretrained(
-                    t5_model_name, config=t5_config,
+                decoder_config = update_attr(
+                    "decoder_config",
+                    decoder_config,
+                    "num_decoder_layers",
+                    self.task_config,
+                    "decoder_num_hidden_layers",
                 )
-                for name, param in self.t5_model.named_parameters():
-                    param.requires_grad = False
-                    param.data = param.data.bfloat16()
-
-                lora = getattr(self.task_config, "lora", False)
-                lora_r = getattr(self.task_config, "lora_r", 16)
-                lora_alpha = getattr(self.task_config, "lora_alpha", 32)
-                lora_dropout = getattr(self.task_config, "lora_dropout", 0.05)
-                peft_config = LoraConfig(
-                    task_type=TaskType.SEQ_2_SEQ_LM,
-                    inference_mode=False,
-                    r=lora_r,
-                    lora_alpha=lora_alpha,
-                    lora_dropout=lora_dropout,
-                    target_modules=['q','k','v','o']
+                self.decoder = DecoderModel(
+                    decoder_config,
+                    bert_word_embeddings_weight,
+                    bert_position_embeddings_weight,
                 )
-
-                if lora:
-                    self.t5_model = get_peft_model(self.t5_model, peft_config, autocast_adapter_dtype=False)
-                    self.t5_model.print_trainable_parameters()
-
-                self.t5_proj = nn.Linear(
-                    self.Qformer.config.hidden_size, self.t5_model.config.hidden_size
-                )
+                if self.Qformer.config.hidden_size != decoder_config.hidden_size:
+                    self.decoder_cross_proj = nn.Linear(self.Qformer.config.hidden_size, decoder_config.hidden_size)
+                    show_log(
+                        task_config,
+                        "Add decoder cross projection: {} -> {}.".format(
+                            self.Qformer.config.hidden_size, decoder_config.hidden_size
+                        )
+                    )
+                else:
+                    self.decoder_cross_proj = nn.Identity()
                 # <=== End of Decoder
 
             if self.task_config.do_pretrain:
@@ -401,6 +263,8 @@ class UniVL(UniVLPreTrainedModel):
                 self.alm_loss_fct = CrossEntropyLoss(ignore_index=-1)
                 
             self.similarity_dense = nn.Linear(bert_config.hidden_size, 1)
+            # Decoder labels are padded with 0 ([PAD]) in dataloaders, so ignore 0 for CE loss.
+            self.decoder_loss_fct = CrossEntropyLoss(ignore_index=0)
 
         self.normalize_video = NormalizeVideo(task_config)
 
@@ -418,12 +282,10 @@ class UniVL(UniVLPreTrainedModel):
             self.loss_fct = CrossEn() if self._stage_two else max_margin_ranking_loss
             self._pretrain_sim_loss_fct = max_margin_ranking_loss
         
-        self._cider_scorer = None  # lazy init
         self._init_weights_except_pretrained_submodules()
 
     def _init_weights_except_pretrained_submodules(self):
-        # skip_roots = {"Qformer", "t5_model"}
-        skip_roots = {"Qformer", "t5_model", "t5_proj", "qformer_visual_proj", "query_tokens", "normalize_video"}
+        skip_roots = {"Qformer", "qformer_visual_proj", "query_tokens", "normalize_video"}
 
         def init_module(module):
             for name, child in module._modules.items():
@@ -436,8 +298,7 @@ class UniVL(UniVLPreTrainedModel):
 
     def forward(self, input_ids, token_type_ids, attention_mask, video, video_mask=None,
                 pairs_masked_text=None, pairs_token_labels=None, masked_video=None, video_labels_index=None,
-                input_caption_ids=None, decoder_mask=None, output_caption_ids=None,
-                t5_output_caption_ids=None, gt_refs=None):
+                input_caption_ids=None, decoder_mask=None, output_caption_ids=None):
 
         input_ids = input_ids.view(-1, input_ids.shape[-1])
         token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1])
@@ -501,18 +362,29 @@ class UniVL(UniVLPreTrainedModel):
                         (self.task_config.do_pretrain
                          or (self.task_config.do_pretrain is False and self.task_config.task_type == "caption")):
                     if self.task_config.do_pretrain:
-                        decoder_loss = self._get_t5_caption_loss(visual_output_alm,
-                                                                 video_mask,
-                                                                 output_caption_ids,
-                                                                 t5_output_caption_ids)
+                        decoder_scores = self._get_decoder_score(
+                            visual_output_alm,
+                            video_mask,
+                            input_caption_ids,
+                            decoder_mask,
+                            shaped=True,
+                        )
                     elif self.task_config.task_type == "caption":
-                        decoder_loss = self._get_t5_caption_loss(visual_output,
-                                                                 video_mask,
-                                                                 output_caption_ids,
-                                                                 t5_output_caption_ids,
-                                                                 gt_refs=gt_refs)
+                        decoder_scores = self._get_decoder_score(
+                            visual_output,
+                            video_mask,
+                            input_caption_ids,
+                            decoder_mask,
+                            shaped=True,
+                        )
                     else:
                         raise NotImplementedError
+
+                    output_caption_ids = output_caption_ids.view(-1, output_caption_ids.shape[-1])
+                    decoder_loss = self.decoder_loss_fct(
+                        decoder_scores.view(-1, self.bert_config.vocab_size),
+                        output_caption_ids.view(-1),
+                    )
                     loss += decoder_loss
 
                 if self.task_config.do_pretrain or self.task_config.task_type == "retrieval":
@@ -532,14 +404,22 @@ class UniVL(UniVLPreTrainedModel):
         else:
             # During evaluation, return (loss, visual_output) so callers can
             # reuse visual_output for generation without re-encoding.
-            if (self._stage_two and 
-                input_caption_ids is not None and 
+            if (self._stage_two and
+                input_caption_ids is not None and
                 output_caption_ids is not None and
                 self.task_config.task_type == "caption"):
-                decoder_loss = self._get_t5_caption_loss(visual_output,
-                                                         video_mask,
-                                                         output_caption_ids,
-                                                         t5_output_caption_ids)
+                decoder_scores = self._get_decoder_score(
+                    visual_output,
+                    video_mask,
+                    input_caption_ids,
+                    decoder_mask,
+                    shaped=True,
+                )
+                output_caption_ids = output_caption_ids.view(-1, output_caption_ids.shape[-1])
+                decoder_loss = self.decoder_loss_fct(
+                    decoder_scores.view(-1, self.bert_config.vocab_size),
+                    output_caption_ids.view(-1),
+                )
                 return decoder_loss, visual_output
             else:
                 return None, visual_output
@@ -615,325 +495,123 @@ class UniVL(UniVLPreTrainedModel):
 
         cross_output = query_output.last_hidden_state.to(dtype=visual_output.dtype)
         pooled_output = cross_output[:, 0]
-
-        return cross_output, pooled_output
-
-    def _build_t5_encoder_inputs(self, visual_output, video_mask, cross_output=None):
-        """Build T5 encoder inputs from visual features via Q-Former.
-
-        Args:
-            visual_output: Visual encoder output [B, T, visual_dim]
-            video_mask:    Binary mask for valid frames [B, T]
-            cross_output:  Optional pre-computed Q-Former output [B, Q, hidden].
-                           Pass this to reuse a Q-Former forward already done in
-                           the caller (avoids a redundant second Q-Former pass).
-        """
-        if cross_output is None:
-            cross_output, _ = self._get_cross_output(visual_output, video_mask)
-        inputs_t5 = self.t5_proj(cross_output)
-        atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long, device=inputs_t5.device)
-
-        prompt = [self.prompt] * inputs_t5.size(0)
-        prompt_tokens = self.t5_tokenizer(
-            prompt,
-            padding="longest",
-            truncation=True,
-            max_length=self.max_txt_len,
-            return_tensors="pt",
-        ).to(inputs_t5.device)
-
-        prompt_embeds = self.t5_model.encoder.embed_tokens(prompt_tokens.input_ids)
-        inputs_embeds = torch.cat([inputs_t5, prompt_embeds], dim=1)
-        encoder_atts = torch.cat([atts_t5, prompt_tokens.attention_mask], dim=1)
-        return inputs_embeds, encoder_atts
-
-    def _compute_xe_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids):
-        pad_token_id = self.t5_tokenizer.pad_token_id
-        output_tokens = output_caption_ids.clone()
-        output_tokens = output_tokens.masked_fill(output_tokens.lt(0), pad_token_id)
-        output_mask = output_tokens.ne(pad_token_id).long()
-        targets = output_tokens.masked_fill(output_tokens.eq(pad_token_id), -100)
-
-        outputs = self.t5_model(
-            inputs_embeds=inputs_embeds,
-            attention_mask=encoder_atts,
-            decoder_attention_mask=output_mask,
-            return_dict=True,
-            labels=targets,
-        )
-        return outputs.loss
-
-    # def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None):
-    #     from pycocoevalcap.cider.cider import Cider
-
-    #     with torch.no_grad():
-    #         outputs = self.t5_model.generate(
-    #             inputs_embeds=inputs_embeds,
-    #             attention_mask=encoder_atts,
-    #             do_sample=False,
-    #             top_p=0.9,
-    #             temperature=1,
-    #             num_beams=self.eval_beam_size,
-    #             max_length=self.max_txt_len,
-    #             repetition_penalty=1.2,
-    #             length_penalty=1.0,
-    #             num_return_sequences=self.scst_num_samples,
-    #             return_dict_in_generate=True,
-    #             output_scores=True,
-    #         )
-
-    #     batch_size = output_caption_ids.size(0)
-    #     generated_ids = outputs.sequences
-    #     decoder_input_ids = generated_ids[:, :-1]
-    #     labels = generated_ids[:, 1:]
-    #     pad_token_id = self.t5_tokenizer.pad_token_id
-    #     labels_mask = labels.ne(pad_token_id)
-
-    #     repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
-    #     repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
-    #     score_outputs = self.t5_model(
-    #         inputs_embeds=repeated_inputs_embeds,
-    #         attention_mask=repeated_encoder_atts,
-    #         decoder_input_ids=decoder_input_ids,
-    #         return_dict=True,
-    #     )
-    #     token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)
-    #     selected_log_probs = token_log_probs.gather(
-    #         dim=-1,
-    #         index=labels.unsqueeze(-1),
-    #     ).squeeze(-1)
-    #     selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
-    #     output_length = labels_mask.sum(dim=1).clamp(min=1)
-    #     sequences_scores = selected_log_probs.sum(dim=1) / output_length
-    #     sequences_scores = sequences_scores.view(batch_size, self.scst_num_samples)
-
-    #     caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-    #     caps_gen = [text.strip() for text in caps_gen]
-
-    #     # Use T5-tokenized GT IDs if available (correct vocab), otherwise
-    #     # fall back to output_caption_ids (BERT vocab — legacy/incorrect)
-    #     if t5_output_caption_ids is not None:
-    #         gt_ids = t5_output_caption_ids
-    #     else:
-    #         gt_ids = output_caption_ids
-    #     gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
-    #     caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
-    #     caps_gt = list(itertools.chain(*([c] * self.scst_num_samples for c in caps_gt)))
-    #     caps_gt = [[c] for c in caps_gt]
-
-    #     caps_gen, caps_gt = tokenize(caps_gt, caps_gen)
-    #     reward = Cider().compute_score(caps_gt, caps_gen)[1].astype(np.float32)
-    #     reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
-    #     reward_baseline = torch.mean(reward, -1, keepdim=True)
-
-    #     loss = -(sequences_scores) * (reward - reward_baseline).detach()
-    #     return loss.mean()
-
-    def _compute_diversity_loss(self, cross_output):
-        """Penalise high cosine similarity between different Q-Former query tokens.
-
-        This encourages the 32 query tokens to specialise to different temporal/
-        semantic aspects of the video rather than collapsing to near-identical
-        representations.
-
-        Args:
-            cross_output: Q-Former output [B, Q, hidden]
-        Returns:
-            Scalar diversity loss (mean off-diagonal cosine similarity).
-        """
-        # Work in float32 for numerical stability; cross_output may be bfloat16
-        q = F.normalize(cross_output.float(), dim=-1)          # [B, Q, H]
-        sim = torch.bmm(q, q.transpose(1, 2))                  # [B, Q, Q]  values in [-1, 1]
-        Q = sim.size(1)
-        # Mask the diagonal (self-similarity = 1, always; we only penalise cross-token sim)
-        off_diag = 1.0 - torch.eye(Q, device=sim.device).unsqueeze(0)  # [1, Q, Q]
-        diversity_loss = (sim * off_diag).sum() / (off_diag.sum() * sim.size(0))
-        return diversity_loss.to(cross_output.dtype)
-
-    def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
-        if output_caption_ids is None:
-            return torch.tensor(0.0, device=visual_output.device)
-        if t5_output_caption_ids is None:
-            raise ValueError(
-                "t5_output_caption_ids is required for T5 caption loss. "
-                "output_caption_ids uses the BERT vocab and must not be used as T5 labels."
-            )
-
-        output_caption_ids = output_caption_ids.view(-1, output_caption_ids.shape[-1])
-        t5_output_caption_ids = t5_output_caption_ids.view(-1, t5_output_caption_ids.shape[-1])
-
-        with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            # ── Run Q-Former once; reuse cross_output for both diversity loss
-            # and T5 encoder input construction (avoids a redundant forward pass).
-            cross_output, _ = self._get_cross_output(visual_output, video_mask)
-
-            # Diversity regularization: only during training, weight configurable
-            diversity_weight = getattr(self.task_config, "qformer_diversity_weight", 0.05)
-            diversity_loss = (
-                self._compute_diversity_loss(cross_output)
-                if (self.training and diversity_weight > 0.0)
-                else 0.0
-            )
-
-            inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
-                visual_output, video_mask, cross_output=cross_output
-            )
-            if self.training and getattr(self, "scst", False):
-                alpha = getattr(self.task_config, "scst_alpha", 1.0)
-                scst_loss = self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
-                if alpha < 1.0:
-                    xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
-                    caption_loss = alpha * xe_loss + (1 - alpha) * scst_loss
-                else:
-                    caption_loss = scst_loss
-            else:
-                caption_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
-
-            return caption_loss + diversity_weight * diversity_loss
-
-
-    def init_corpus_cider(self, video_sentences_dict):
-        """Initialize corpus-level CIDEr scorer with IDF from the full training set.
-
-        Call this once after creating the dataloader so that SCST reward
-        uses stable, corpus-level IDF statistics instead of noisy batch-level IDF.
-        """
-        from utils.cider_utils import CorpusCider
-        self._cider_scorer = CorpusCider()
-        self._cider_scorer.init_corpus_df(video_sentences_dict)
-        logger.info("Corpus-level CIDEr scorer initialized for SCST training.")
-
-    def _get_cider_scorer(self):
-        if self._cider_scorer is None:
-            # Fallback to batch-level CIDEr if corpus CIDEr was not initialized
-            from pycocoevalcap.cider.cider import Cider
-            logger.warning(
-                "Using batch-level CIDEr (corpus CIDEr not initialized). "
-                "Call model.init_corpus_cider(video_sentences_dict) for better IDF."
-            )
-            self._cider_scorer = Cider()
-        return self._cider_scorer
-
-    def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
-        """Beam-search SCST loss matching the reference mllm-video-captioner approach.
-
-        Key design choices (aligned with the reference paper, CIDEr > 80):
-        1. Deterministic beam search for candidate generation (not sampling).
-        2. Sequence scores from transition scores (actual beam log-probs).
-        3. Mean-beam reward as baseline (not greedy baseline).
-        4. Corpus-level CIDEr-D for stable IDF statistics.
-        """
-        batch_size = output_caption_ids.size(0)
-        pad_token_id = self.t5_tokenizer.pad_token_id
-
-        # ── 1. Beam search generation (deterministic, like reference) ──
-        # Wrapped in no_grad for memory efficiency; gradients flow through
-        # the teacher-forced re-scoring in step 2 instead.
-        with torch.no_grad():
-            outputs = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
-                do_sample=False,
-                num_beams=self.scst_num_samples,
-                max_length=self.max_txt_len,
-                repetition_penalty=1.0,
-                length_penalty=1.0,
-                num_return_sequences=self.scst_num_samples,
-                return_dict_in_generate=True,
-                output_scores=True,
-            )
-            generated_ids = outputs.sequences  # (B * scst_num_samples, L)
-
-        # ── 2. Teacher-forced re-scoring WITH GRAD ──
-        # generate() runs in no_grad, so transition_scores have no gradient.
-        # We re-score the generated sequences via a differentiable forward
-        # pass to obtain log p(y|x) that backprop can flow through.
-        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
-        repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
-
-        decoder_input_ids = generated_ids[:, :-1].contiguous()
-        labels = generated_ids[:, 1:].contiguous()
-
-        score_outputs = self.t5_model(
-            inputs_embeds=repeated_inputs_embeds,
-            attention_mask=repeated_encoder_atts,
-            decoder_input_ids=decoder_input_ids,
-            return_dict=True,
+        query_mask = torch.ones(
+            cross_output.size()[:-1],
+            dtype=torch.long,
+            device=cross_output.device,
         )
 
-        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)
-        selected_log_probs = token_log_probs.gather(
-            dim=-1, index=labels.unsqueeze(-1)
-        ).squeeze(-1)
+        return cross_output, pooled_output, query_mask
 
-        labels_mask = labels.ne(pad_token_id)
-        selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
-        output_length = labels_mask.sum(dim=1).clamp(min=1)
-        sequences_scores = (selected_log_probs.sum(dim=1) / output_length).view(
-            batch_size, self.scst_num_samples
-        )
-
-        # ── 3. CIDEr reward (no grad needed) ──
-        with torch.no_grad():
-            caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-            caps_gen = [t.strip() for t in caps_gen]
-
-            # Build GT references for CIDEr computation
-            if gt_refs is not None and len(gt_refs) == batch_size:
-                caps_gt_repeated = []
-                for sample_refs in gt_refs:
-                    for _ in range(self.scst_num_samples):
-                        caps_gt_repeated.append(sample_refs)
-            else:
-                gt_ids = t5_output_caption_ids if t5_output_caption_ids is not None else output_caption_ids
-                gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
-                caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
-                caps_gt_repeated = [[c] for c in itertools.chain.from_iterable(
-                    [c] * self.scst_num_samples for c in caps_gt
-                )]
-
-            caps_gt_tok, caps_gen_tok = tokenize(caps_gt_repeated, caps_gen)
-            reward = self._get_cider_scorer().compute_score(caps_gt_tok, caps_gen_tok)[1].astype(np.float32)
-            reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
-
-            # ── 4. Mean-beam baseline (reference approach) ──
-            reward_baseline = torch.mean(reward, dim=-1, keepdim=True)
-            advantage = reward - reward_baseline  # (B, scst_num_samples)
-
-        # ── 5. SCST policy-gradient loss ──
-        # L = - E[ log p(y|x) * (R(y) - b) ]
-        # sequences_scores carries gradients from step 2; advantage is detached.
-        loss = -(sequences_scores * advantage.detach())
-        return loss.mean()
 
     def generate_caption_ids(self, visual_output, video_mask, num_beams=None, max_length=None):
         if num_beams is None:
             num_beams = max(1, getattr(self, "eval_beam_size", getattr(self, "beam_size", 1)))
         if max_length is None:
-            max_length = getattr(self, "max_txt_len", 32)
+            max_length = getattr(self.task_config, "max_words", 32)
 
-        with torch.amp.autocast(device_type="cuda",dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
-                visual_output, video_mask
+        device = visual_output.device
+        n_inst, len_v, v_h = visual_output.size()
+        n_bm = num_beams
+
+        def get_inst_idx_to_tensor_position_map(inst_idx_list):
+            return {inst_idx: tensor_position for tensor_position, inst_idx in enumerate(inst_idx_list)}
+
+        def collect_active_part(beamed_tensor, curr_active_inst_idx, n_prev_active_inst, n_bm):
+            _, *d_hs = beamed_tensor.size()
+            n_curr_active_inst = len(curr_active_inst_idx)
+            new_shape = (n_curr_active_inst * n_bm, *d_hs)
+
+            beamed_tensor = beamed_tensor.view(n_prev_active_inst, -1)
+            beamed_tensor = beamed_tensor.index_select(0, curr_active_inst_idx)
+            beamed_tensor = beamed_tensor.view(*new_shape)
+            return beamed_tensor
+
+        def collate_active_info(visual_output_rpt, video_mask_rpt, inst_idx_to_position_map, active_inst_idx_list, n_bm):
+            n_prev_active_inst = len(inst_idx_to_position_map)
+            active_inst_idx = [inst_idx_to_position_map[k] for k in active_inst_idx_list]
+            active_inst_idx = torch.LongTensor(active_inst_idx).to(device)
+
+            visual_output_rpt = collect_active_part(visual_output_rpt, active_inst_idx, n_prev_active_inst, n_bm)
+            video_mask_rpt = collect_active_part(video_mask_rpt, active_inst_idx, n_prev_active_inst, n_bm)
+            active_inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
+            return visual_output_rpt, video_mask_rpt, active_inst_idx_to_position_map
+
+        def prepare_beam_dec_seq(inst_dec_beams, len_dec_seq):
+            dec_partial_seq = [b.get_current_state() for b in inst_dec_beams if not b.done]
+            dec_partial_seq = torch.stack(dec_partial_seq).to(device)
+            dec_partial_seq = dec_partial_seq.view(-1, len_dec_seq)
+            return dec_partial_seq
+
+        def collect_active_inst_idx_list(inst_beams, word_prob, inst_idx_to_position_map):
+            active_inst_idx_list = []
+            for inst_idx, inst_position in inst_idx_to_position_map.items():
+                is_inst_complete = inst_beams[inst_idx].advance(word_prob[inst_position])
+                if not is_inst_complete:
+                    active_inst_idx_list.append(inst_idx)
+            return active_inst_idx_list
+
+        def collect_hypothesis(inst_dec_beams):
+            results = []
+            for inst_idx in range(len(inst_dec_beams)):
+                _, tail_idxs = inst_dec_beams[inst_idx].sort_scores()
+                results.append(inst_dec_beams[inst_idx].get_hypothesis(tail_idxs[0]))
+            return results
+
+        visual_output_rpt = visual_output.repeat(1, n_bm, 1).view(n_inst * n_bm, len_v, v_h)
+        video_mask_rpt = video_mask.repeat(1, n_bm).view(n_inst * n_bm, len_v)
+
+        inst_dec_beams = [Beam(n_bm, device=device, tokenizer=self.tokenizer) for _ in range(n_inst)]
+        active_inst_idx_list = list(range(n_inst))
+        inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
+
+        for len_dec_seq in range(1, max_length + 1):
+            dec_seq = prepare_beam_dec_seq(inst_dec_beams, len_dec_seq)
+            next_decoder_mask = torch.ones(dec_seq.size(), dtype=torch.uint8, device=device)
+
+            dec_output = self.decoder_caption(
+                visual_output_rpt,
+                video_mask_rpt,
+                dec_seq,
+                next_decoder_mask,
+                shaped=True,
+                get_logits=True,
             )
-            outputs = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
-                do_sample=False,
-                num_beams=num_beams,
-                max_length=max_length,
-                repetition_penalty=1.2,
-                length_penalty=1.0,
+            dec_output = dec_output[:, -1, :]
+            word_prob = torch.nn.functional.log_softmax(dec_output, dim=1)
+            word_prob = word_prob.view(len(active_inst_idx_list), n_bm, -1)
+
+            active_inst_idx_list = collect_active_inst_idx_list(inst_dec_beams, word_prob, inst_idx_to_position_map)
+            if not active_inst_idx_list:
+                break
+
+            visual_output_rpt, video_mask_rpt, inst_idx_to_position_map = collate_active_info(
+                visual_output_rpt,
+                video_mask_rpt,
+                inst_idx_to_position_map,
+                active_inst_idx_list,
+                n_bm,
             )
 
-        return outputs
+        hypotheses = collect_hypothesis(inst_dec_beams)
+        pad_id = self.tokenizer.vocab.get("[PAD]", 0)
+        output_ids = torch.full((n_inst, max_length), pad_id, dtype=torch.long, device=device)
+        for idx, hyp in enumerate(hypotheses):
+            if not hyp:
+                continue
+            length = min(len(hyp), max_length)
+            output_ids[idx, :length] = torch.tensor(hyp[:length], device=device)
+
+        return output_ids
 
     def generate_caption_text(self, visual_output, video_mask, num_beams=None, max_length=None):
         output_ids = self.generate_caption_ids(
             visual_output, video_mask, num_beams=num_beams, max_length=max_length
         )
-        captions = self.t5_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-        return [caption.strip() for caption in captions]
+        captions = []
+        for token_ids in output_ids.tolist():
+            captions.append(" ".join(self.tokenizer.convert_ids_to_tokens(token_ids)).strip())
+        return captions
 
     def _mean_pooling_for_similarity(self, sequence_output, visual_output, attention_mask, video_mask,):
         attention_mask_un = attention_mask.to(dtype=torch.float).unsqueeze(-1)
@@ -971,7 +649,11 @@ class UniVL(UniVLPreTrainedModel):
             video_mask_r = video_mask.unsqueeze(0).repeat(step_truth, 1, 1)
             video_mask_r = video_mask_r.view(-1, s_visual)
 
-            _, pooled_output = self._get_cross_output(visual_output_r, video_mask_r)
+            _, pooled_output, _ = self._get_cross_output(
+                visual_output_r,
+                video_mask_r,
+                num_query_token=self.num_query_token,
+            )
             retrieve_logits_row = self.similarity_dense(pooled_output).squeeze(-1).view(step_truth, b_visual)
 
             retrieve_logits_list.append(retrieve_logits_row)
@@ -1002,46 +684,41 @@ class UniVL(UniVLPreTrainedModel):
             input_caption_ids = input_caption_ids.view(-1, input_caption_ids.shape[-1])
             decoder_mask = decoder_mask.view(-1, decoder_mask.shape[-1])
 
-        with torch.amp.autocast(device_type="cuda",dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
-                visual_output, video_mask
-            )
+        decoder_input_ids = input_caption_ids.clone().masked_fill(input_caption_ids.lt(0), 0)
+        decoder_att_mask = decoder_mask.long() if decoder_mask is not None else decoder_input_ids.ne(0).long()
 
-            pad_token_id = self.t5_tokenizer.pad_token_id
-            decoder_input_ids = input_caption_ids.clone().masked_fill(input_caption_ids.lt(0), pad_token_id)
-            if decoder_mask is not None:
-                decoder_att_mask = decoder_mask.long()
-            else:
-                decoder_att_mask = decoder_input_ids.ne(pad_token_id).long()
-
-            outputs = self.t5_model(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
-                decoder_input_ids=decoder_input_ids,
-                decoder_attention_mask=decoder_att_mask,
-                return_dict=True,
-            )
-            decoder_scores = outputs.logits
+        cross_output, _, query_mask = self._get_cross_output(
+            visual_output,
+            video_mask,
+            num_query_token=self.num_query_token,
+        )
+        cross_output = self.decoder_cross_proj(cross_output)
+        decoder_scores = self.decoder(
+            decoder_input_ids,
+            encoder_outs=cross_output,
+            answer_mask=decoder_att_mask,
+            encoder_mask=query_mask,
+        )
 
         return decoder_scores
 
-    def decoder_caption(self, sequence_output, visual_output, input_ids, attention_mask, video_mask, input_caption_ids, decoder_mask,
+    def decoder_caption(self, visual_output, video_mask, input_caption_ids, decoder_mask,
                         shaped=False, get_logits=False):
         if shaped is False:
-            input_ids = input_ids.view(-1, input_ids.shape[-1])
-            attention_mask = attention_mask.view(-1, attention_mask.shape[-1])
             video_mask = video_mask.view(-1, video_mask.shape[-1])
-
             input_caption_ids = input_caption_ids.view(-1, input_caption_ids.shape[-1])
             decoder_mask = decoder_mask.view(-1, decoder_mask.shape[-1])
 
-        decoder_scores = self._get_decoder_score(visual_output,
-                             video_mask,
-                             input_caption_ids, decoder_mask, shaped=True)
+        decoder_scores = self._get_decoder_score(
+            visual_output,
+            video_mask,
+            input_caption_ids,
+            decoder_mask,
+            shaped=True,
+        )
 
         if get_logits:
             return decoder_scores
 
         _, decoder_scores_result = torch.max(decoder_scores, -1)
-
         return decoder_scores_result

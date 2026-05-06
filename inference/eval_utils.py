@@ -12,6 +12,8 @@ def decode_tokens_to_text(token_ids: List[int], tokenizer: Any) -> str:
     if "[PAD]" in decode_text_list:
         PAD_index = decode_text_list.index("[PAD]")
         decode_text_list = decode_text_list[:PAD_index]
+    if decode_text_list and decode_text_list[0] == "[CLS]":
+        decode_text_list = decode_text_list[1:]
     
     # Join tokens and handle subword tokens (##)
     decode_text = ' '.join(decode_text_list)

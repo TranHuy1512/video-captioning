@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <rect width="1200" height="520" fill="#f8f7f3"/>
+
+  <defs>
+    <style>
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .title { font: 700 18px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #111827; }
+      .label { font: 600 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #111827; }
+      .small { font: 500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #374151; }
+      .arrow { stroke: #1f2937; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .sub { fill: #eef2ff; stroke: #4338ca; stroke-width: 1.5; rx: 12; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#1f2937" />
+    </marker>
+  </defs>
+
+  <text x="40" y="40" class="title">UniVL Pipeline (QFormer -&gt; Decoder)</text>
+
+  <!-- Video path -->
+  <rect x="40" y="90" width="170" height="60" class="box"/>
+  <text x="55" y="125" class="label">Video Features</text>
+
+  <rect x="250" y="90" width="170" height="60" class="box"/>
+  <text x="265" y="125" class="label">NormalizeVideo</text>
+
+  <rect x="460" y="90" width="170" height="60" class="box"/>
+  <text x="485" y="125" class="label">Visual Encoder</text>
+
+  <rect x="670" y="90" width="170" height="60" class="box"/>
+  <text x="700" y="125" class="label">QFormer</text>
+  <text x="700" y="145" class="small">cross-attn</text>
+
+  <rect x="880" y="90" width="170" height="60" class="box"/>
+  <text x="905" y="125" class="label">Decoder</text>
+
+  <rect x="1080" y="90" width="100" height="60" class="box"/>
+  <text x="1093" y="125" class="label">Caption</text>
+
+  <path d="M210 120 L250 120" class="arrow"/>
+  <path d="M420 120 L460 120" class="arrow"/>
+  <path d="M630 120 L670 120" class="arrow"/>
+  <path d="M840 120 L880 120" class="arrow"/>
+  <path d="M1050 120 L1080 120" class="arrow"/>
+
+  <!-- Text path -->
+  <rect x="40" y="220" width="170" height="60" class="box"/>
+  <text x="70" y="255" class="label">Text Tokens</text>
+
+  <rect x="250" y="220" width="170" height="60" class="box"/>
+  <text x="278" y="255" class="label">BERT Encoder</text>
+
+  <rect x="460" y="220" width="170" height="60" class="box"/>
+  <text x="485" y="255" class="label">Similarity Head</text>
+  <text x="500" y="275" class="small">retrieval</text>
+
+  <path d="M210 250 L250 250" class="arrow"/>
+  <path d="M420 250 L460 250" class="arrow"/>
+  <path d="M630 120 L640 120 C680 120 680 250 630 250 L630 250" class="arrow"/>
+
+  <!-- Loss blocks -->
+  <rect x="40" y="340" width="240" height="120" class="sub"/>
+  <text x="60" y="370" class="label">Pretrain Losses</text>
+  <text x="60" y="395" class="small">MLM (text)</text>
+  <text x="60" y="415" class="small">MFM (video)</text>
+
+  <rect x="320" y="340" width="240" height="120" class="sub"/>
+  <text x="340" y="370" class="label">Caption Loss</text>
+  <text x="340" y="395" class="small">decoder cross-entropy</text>
+
+  <rect x="600" y="340" width="260" height="120" class="sub"/>
+  <text x="620" y="370" class="label">Inference</text>
+  <text x="620" y="395" class="small">beam search over decoder</text>
+
+  <path d="M125 280 L125 340" class="arrow"/>
+  <path d="M965 150 L965 340" class="arrow"/>
+  <path d="M755 150 L755 340" class="arrow"/>
+</svg>

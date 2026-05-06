@@ -23,8 +23,6 @@ class Youcook_Caption_DataLoader(Dataset):
             feature_framerate=1.0,
             max_words=30,
             max_frames=100,
-            t5_tokenizer=None,
-            max_txt_len=32,
     ):
         """
         Args:
@@ -36,9 +34,6 @@ class Youcook_Caption_DataLoader(Dataset):
         self.max_words = max_words
         self.max_frames = max_frames
         self.tokenizer = tokenizer
-        self.t5_tokenizer = t5_tokenizer
-        self.max_txt_len = max_txt_len
-
         self.feature_size = self.feature_dict[self.csv["feature_file"].values[0]].shape[-1]
 
         # Get iterator video ids
@@ -64,19 +59,15 @@ class Youcook_Caption_DataLoader(Dataset):
 
         starts = np.zeros(k)
         ends = np.zeros(k)
-        pairs_text = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_mask = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_segment = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_masked_text = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_token_labels = np.zeros((k, self.max_words), dtype=np.long)
+        pairs_text = np.zeros((k, self.max_words), dtype=np.int64)
+        pairs_mask = np.zeros((k, self.max_words), dtype=np.int64)
+        pairs_segment = np.zeros((k, self.max_words), dtype=np.int64)
+        pairs_masked_text = np.zeros((k, self.max_words), dtype=np.int64)
+        pairs_token_labels = np.zeros((k, self.max_words), dtype=np.int64)
 
-        pairs_input_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.long)
-
-        # T5-tokenized ground truth for SCST training
-        t5_max_len = self.max_txt_len if self.t5_tokenizer is not None else self.max_words
-        pairs_t5_output_caption_ids = np.zeros((k, t5_max_len), dtype=np.long)
+        pairs_input_caption_ids = np.zeros((k, self.max_words), dtype=np.int64)
+        pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.int64)
+        pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.int64)
 
         for i in range(k):
             ind = r_ind[i]
@@ -169,28 +160,15 @@ class Youcook_Caption_DataLoader(Dataset):
             pairs_output_caption_ids[i] = np.array(output_caption_ids)
             pairs_decoder_mask[i] = np.array(decoder_mask)
 
-            # T5-tokenize the raw caption text for SCST ground truth
-            if self.t5_tokenizer is not None:
-                raw_caption = data_dict['text'][ind]
-                t5_tokens = self.t5_tokenizer(
-                    raw_caption,
-                    padding="max_length",
-                    truncation=True,
-                    max_length=t5_max_len,
-                    return_tensors="np",
-                )
-                pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
-
         return pairs_text, pairs_mask, pairs_segment, pairs_masked_text, pairs_token_labels,\
-               pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
-               pairs_t5_output_caption_ids
+               pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, starts, ends
 
     def _get_video(self, idx, s, e):
-        video_mask = np.zeros((len(s), self.max_frames), dtype=np.long)
+        video_mask = np.zeros((len(s), self.max_frames), dtype=np.int64)
         max_video_length = [0] * len(s)
 
         video_features = self.feature_dict[self.csv["feature_file"].values[idx]]
-        video = np.zeros((len(s), self.max_frames, self.feature_size), dtype=np.float)
+        video = np.zeros((len(s), self.max_frames, self.feature_size), dtype=np.float32)
         for i in range(len(s)):
             start = int(s[i] * self.feature_framerate)
             end = int(e[i] * self.feature_framerate) + 1
@@ -225,7 +203,7 @@ class Youcook_Caption_DataLoader(Dataset):
                         video_labels_index[i].append(-1)
                 else:
                     video_labels_index[i].append(-1)
-        video_labels_index = np.array(video_labels_index, dtype=np.long)
+        video_labels_index = np.array(video_labels_index, dtype=np.int64)
         # -----> Mask Frame Model
 
         return video, video_mask, masked_video, video_labels_index
@@ -237,12 +215,11 @@ class Youcook_Caption_DataLoader(Dataset):
 
         pairs_text, pairs_mask, pairs_segment, \
         pairs_masked_text, pairs_token_labels, pairs_input_caption_ids, \
-        pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
-        pairs_t5_output_caption_ids = self._get_text(video_id, sub_id)
+        pairs_decoder_mask, pairs_output_caption_ids, starts, ends = self._get_text(video_id, sub_id)
 
         video, video_mask, masked_video, video_labels_index = self._get_video(idx, starts, ends)
 
         return pairs_text, pairs_mask, pairs_segment, video, video_mask, \
-               pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
-               pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-               pairs_t5_output_caption_ids, feature_idx
+            pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
+            pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
+            feature_idx

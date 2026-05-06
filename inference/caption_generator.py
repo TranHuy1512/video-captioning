@@ -1,7 +1,12 @@
 import torch
 from inference.eval_utils import decode_tokens_to_text, save_predictions, save_complete_results, log_metrics
-# from tasks.pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+try:
+    from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+except ImportError:
+    try:
+        from tasks.pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+    except ImportError:
+        PTBTokenizer = None
 
 
 def eval_epoch(
@@ -24,7 +29,7 @@ def eval_epoch(
         model = model.module.to(device)
 
     if model._stage_one:
-        return 0.
+        return 0.0, 0.0, 0.0
 
     all_result_lists = []
     all_caption_lists = []
@@ -36,8 +41,7 @@ def eval_epoch(
 
         input_ids, input_mask, segment_ids, video, video_mask, \
         pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
-        pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-        pairs_t5_output_caption_ids = batch
+        pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids = batch
 
         with torch.no_grad():
             # Calculate validation loss
@@ -47,8 +51,7 @@ def eval_epoch(
                         pairs_masked_text=pairs_masked_text, pairs_token_labels=pairs_token_labels,
                         masked_video=masked_video, video_labels_index=video_labels_index,
                         input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
-                        output_caption_ids=pairs_output_caption_ids,
-                        t5_output_caption_ids=pairs_t5_output_caption_ids)
+                        output_caption_ids=pairs_output_caption_ids)
             if loss is not None:
                 if n_gpu > 1:
                     loss = loss.mean()
@@ -57,11 +60,12 @@ def eval_epoch(
             video_mask = video_mask.view(-1, video_mask.shape[-1])
 
             eval_beam_size = max(1, getattr(model, "eval_beam_size", getattr(model, "beam_size", 1)))
-            max_length = getattr(model, "max_txt_len", args.max_words)
+            max_length = getattr(args, "max_words", 32)
             generated_ids = model.generate_caption_ids(
                 visual_output, video_mask, num_beams=eval_beam_size, max_length=max_length
             )
-            all_result_lists.extend(model.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True))
+            for token_ids in generated_ids.cpu().tolist():
+                all_result_lists.append(decode_tokens_to_text(token_ids, tokenizer))
 
             pairs_output_caption_ids = pairs_output_caption_ids.view(-1, pairs_output_caption_ids.shape[-1])
             caption_list = pairs_output_caption_ids.cpu().detach().numpy()
@@ -104,7 +108,10 @@ def eval_epoch(
         all_caption_lists = [all_caption_lists]
 
     if nlgEvalObj is not None:
-        # Apply PTBTokenizer for consistency with SCST training CIDEr computation
+        # Apply PTBTokenizer for consistency with CIDEr computation
+        if PTBTokenizer is None:
+            logger.warning("PTBTokenizer not available; skipping tokenized metrics.")
+            return 0.0, avg_val_loss, 0.0
         ptb_tokenizer = PTBTokenizer()
 
         # Tokenize predictions

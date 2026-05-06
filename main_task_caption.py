@@ -17,9 +17,13 @@ from data.dataloader_factory import DATALOADER_DICT
 from trainers.trainer import train_epoch
 from inference.caption_generator import eval_epoch
 
-# Initialize distributed training only if environment is properly configured
-if not torch.distributed.is_initialized():
-    torch.distributed.init_process_group(backend="nccl")
+def _maybe_init_distributed():
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    if world_size > 1 and not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(backend="nccl")
+
+
+_maybe_init_distributed()
 
 
 def get_args(description='UniVL on Caption Task'):
@@ -83,8 +87,8 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument("--local_rank", default=None, type=int, help="distribted training")
     parser.add_argument('--coef_lr', type=float, default=0.1, help='coefficient for bert branch.')
     parser.add_argument('--lr_qformer', type=float, default=5e-5, help='Learning rate for QFormer parameters.')
-    parser.add_argument('--lr_lora', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
-                        help='Learning rate for T5 LoRA/decoder parameters.')
+    parser.add_argument('--lr_decoder', type=float, default=1e-5,
+                        help='Learning rate for decoder parameters.')
     parser.add_argument('--use_mil', action='store_true', help="Whether use MIL as Miech et. al. (2020).")
     parser.add_argument('--sampled_use_mil', action='store_true', help="Whether use MIL, has a high priority than use_mil.")
 
@@ -94,17 +98,10 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--decoder_num_hidden_layers', type=int, default=3, help="Layer NO. of decoder.")
 
     parser.add_argument('--freeze_vit', action='store_true', help="Freeze vision encoder parameters.")
-    parser.add_argument('--scst', action='store_true', help="Enable SCST training for caption loss.")
-    parser.add_argument('--scst_alpha', type=float, default=1.0,
-                        help="SCST loss weight. 1.0 = pure SCST (reference paper), <1.0 = mix with XE.")
     parser.add_argument('--eval_beam_size', type=int, default=None,
                         help="Beam size used for deterministic caption generation during eval/test.")
-    parser.add_argument('--scst_num_samples', type=int, default=None,
-                        help="Number of beam candidates per video for SCST training.")
     parser.add_argument('--beam_size', type=int, default=None,
-                        help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
-    parser.add_argument('--t5_model', type=str, default='google/flan-t5-xl', help="T5 model name.")
-    parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum text length for T5 tokenizer.")
+                        help="Deprecated alias for --eval_beam_size.")
     parser.add_argument('--num_query_token', type=int, default=32, help="Number of Qformer query tokens.")
     parser.add_argument('--qformer_vision_width', type=int, default=768,
                         help="Encoder feature width expected by QFormer cross-attention.")
@@ -114,14 +111,6 @@ def get_args(description='UniVL on Caption Task'):
                         help="Optional exact checkpoint filename inside the QFormer checkpoint repo/path.")
     parser.add_argument('--qformer_checkpoint_local_files_only', action='store_true',
                         help="Load QFormer checkpoint from local Hugging Face cache only.")
-    parser.add_argument('--qformer_diversity_weight', type=float, default=0.05,
-                        help="Weight for Q-Former query token diversity regularization loss "
-                             "(0.0 to disable). Penalises high cosine similarity between different "
-                             "query tokens to encourage specialization. Default: 0.05")
-    parser.add_argument('--lora', action='store_true', help="Enable LoRA for T5.")
-    parser.add_argument('--lora_r', type=int, default=16, help="LoRA rank.")
-    parser.add_argument('--lora_alpha', type=int, default=32, help="LoRA alpha.")
-    parser.add_argument('--lora_dropout', type=float, default=0.05, help="LoRA dropout.")
 
     parser.add_argument('--stage_two', action='store_true', help="Whether training with decoder.")
     args = parser.parse_args()
@@ -138,9 +127,6 @@ def get_args(description='UniVL on Caption Task'):
     args.batch_size = int(args.batch_size / args.gradient_accumulation_steps)
     if args.eval_beam_size is None:
         args.eval_beam_size = args.beam_size if args.beam_size is not None else 5
-    if args.scst_num_samples is None:
-        args.scst_num_samples = args.beam_size if args.beam_size is not None else 5
-    # Keep the old attribute for backwards compatibility with older scripts/utilities.
     if args.beam_size is None:
         args.beam_size = args.eval_beam_size
 
@@ -155,9 +141,6 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
     model = init_model(args, device, n_gpu, args.local_rank)
 
-    # Get T5 tokenizer from model for dataloader T5 tokenization (used by SCST)
-    t5_tokenizer = getattr(model, 't5_tokenizer', None)
-
     assert args.task_type == "caption"
     
     if PYCOCOEVALCAP_AVAILABLE:
@@ -170,7 +153,7 @@ def main():
             logger.warning("pycocoevalcap not available. Evaluation metrics will be skipped.")
 
     assert args.datatype in DATALOADER_DICT
-    test_dataloader, test_length = DATALOADER_DICT[args.datatype]["val"](args, tokenizer, logger, t5_tokenizer=t5_tokenizer)
+    test_dataloader, test_length = DATALOADER_DICT[args.datatype]["val"](args, tokenizer, logger)
     if args.local_rank == 0:
         logger.info("***** Running test *****")
         logger.info("  Num examples = %d", test_length)
@@ -178,7 +161,7 @@ def main():
         logger.info("  Num steps = %d", len(test_dataloader))
 
     if args.do_train:
-        train_dataloader, train_length, train_sampler = DATALOADER_DICT[args.datatype]["train"](args, tokenizer, t5_tokenizer=t5_tokenizer)
+        train_dataloader, train_length, train_sampler = DATALOADER_DICT[args.datatype]["train"](args, tokenizer)
         num_train_optimization_steps = (int(len(train_dataloader) + args.gradient_accumulation_steps - 1)
                                         / args.gradient_accumulation_steps) * args.epochs
 
@@ -186,12 +169,6 @@ def main():
         if args.init_model:
             coef_lr = 1.0
         optimizer, scheduler, model = prep_optimizer(args, model, num_train_optimization_steps, device, n_gpu, args.local_rank, coef_lr=coef_lr)
-
-        # Initialize corpus-level CIDEr for SCST training
-        if args.scst and hasattr(train_dataloader.dataset, 'video_sentences_dict'):
-            scst_model = model.module if hasattr(model, 'module') else model
-            scst_model.init_corpus_cider(train_dataloader.dataset.video_sentences_dict)
-
 
         if args.local_rank == 0:
             logger.info("***** Running training *****")
@@ -204,7 +181,8 @@ def main():
         best_output_model_file = None
         global_step = 0
         for epoch in range(args.epochs):
-            train_sampler.set_epoch(epoch)
+            if hasattr(train_sampler, "set_epoch"):
+                train_sampler.set_epoch(epoch)
 
             tr_loss, global_step = train_epoch(epoch, args, model, train_dataloader, device, n_gpu, optimizer,
                                                scheduler, global_step, logger, local_rank=args.local_rank)

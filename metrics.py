@@ -8,8 +8,15 @@ try:
     from pycocoevalcap.cider.cider import Cider
     PYCOCOEVALCAP_AVAILABLE = True
 except ImportError:
-    PYCOCOEVALCAP_AVAILABLE = False
-    print("Warning: pycocoevalcap not available. Install with: pip install git+https://github.com/salaniz/pycocoevalcap.git")
+    try:
+        from tasks.pycocoevalcap.bleu.bleu import Bleu
+        from tasks.pycocoevalcap.meteor.meteor import Meteor
+        from tasks.pycocoevalcap.rouge.rouge import Rouge
+        from tasks.pycocoevalcap.cider.cider import Cider
+        PYCOCOEVALCAP_AVAILABLE = True
+    except ImportError:
+        PYCOCOEVALCAP_AVAILABLE = False
+        print("Warning: pycocoevalcap not available. Install with: pip install git+https://github.com/salaniz/pycocoevalcap.git")
 
 
 class CaptionEvaluator:
