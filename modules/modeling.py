@@ -420,11 +420,12 @@ class UniVL(UniVLPreTrainedModel):
             input_caption_ids = input_caption_ids.view(-1, input_caption_ids.shape[-1])
             decoder_mask = decoder_mask.view(-1, decoder_mask.shape[-1])
 
-        # Skip text encoder when it's not needed (caption-only fine-tuning)
+        # Text encoder is needed for caption task (text+video → cross-encoder) and other stage-one/retrieval tasks
         _need_text_encoder = (
             self._stage_one
             or (self._stage_two and self.task_config.do_pretrain)
             or (self._stage_two and self.task_config.task_type == "retrieval")
+            or (self._stage_two and self.task_config.task_type == "caption")
         )
 
         if _need_text_encoder:
@@ -472,16 +473,16 @@ class UniVL(UniVLPreTrainedModel):
                         (self.task_config.do_pretrain
                          or (self.task_config.do_pretrain is False and self.task_config.task_type == "caption")):
                     if self.task_config.do_pretrain:
-                        decoder_loss = self._get_t5_caption_loss(visual_output_alm,
-                                                                 video_mask,
-                                                                 output_caption_ids,
-                                                                 t5_output_caption_ids)
+                        decoder_loss = self._get_t5_caption_loss(
+                            visual_output_alm, video_mask, output_caption_ids, t5_output_caption_ids,
+                            sequence_output=sequence_output_alm, attention_mask=attention_mask,
+                        )
                     elif self.task_config.task_type == "caption":
-                        decoder_loss = self._get_t5_caption_loss(visual_output,
-                                                                 video_mask,
-                                                                 output_caption_ids,
-                                                                 t5_output_caption_ids,
-                                                                 gt_refs=gt_refs)
+                        decoder_loss = self._get_t5_caption_loss(
+                            visual_output, video_mask, output_caption_ids, t5_output_caption_ids,
+                            gt_refs=gt_refs,
+                            sequence_output=sequence_output, attention_mask=attention_mask,
+                        )
                     else:
                         raise NotImplementedError
                     loss += decoder_loss
@@ -501,19 +502,19 @@ class UniVL(UniVLPreTrainedModel):
 
             return loss
         else:
-            # During evaluation, return (loss, visual_output) so callers can
-            # reuse visual_output for generation without re-encoding.
-            if (self._stage_two and 
-                input_caption_ids is not None and 
+            # During evaluation, return (loss, visual_output, sequence_output, attention_mask) so
+            # callers can reuse all features for generation without re-encoding.
+            if (self._stage_two and
+                input_caption_ids is not None and
                 output_caption_ids is not None and
                 self.task_config.task_type == "caption"):
-                decoder_loss = self._get_t5_caption_loss(visual_output,
-                                                         video_mask,
-                                                         output_caption_ids,
-                                                         t5_output_caption_ids)
-                return decoder_loss, visual_output
+                decoder_loss = self._get_t5_caption_loss(
+                    visual_output, video_mask, output_caption_ids, t5_output_caption_ids,
+                    sequence_output=sequence_output, attention_mask=attention_mask,
+                )
+                return decoder_loss, visual_output, sequence_output, attention_mask
             else:
-                return None, visual_output
+                return None, visual_output, sequence_output, attention_mask
 
     def _calculate_mlm_loss(self, sequence_output_alm, pairs_token_labels):
         alm_scores = self.cls(sequence_output_alm)
@@ -587,9 +588,13 @@ class UniVL(UniVLPreTrainedModel):
 
         return cross_output, pooled_output, concat_mask
 
-    def _build_t5_encoder_inputs(self, visual_output, video_mask, cross_output=None):
+    def _build_t5_encoder_inputs(self, visual_output, video_mask, cross_output=None,
+                                   sequence_output=None, attention_mask=None):
         if cross_output is None:
-            cross_output, _, _ = self._get_cross_output(visual_output, video_mask)
+            cross_output, _, _ = self._get_cross_output(
+                visual_output, video_mask,
+                sequence_output=sequence_output, attention_mask=attention_mask,
+            )
         inputs_t5 = self.t5_proj(cross_output)
         atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long, device=inputs_t5.device)
 
@@ -689,7 +694,8 @@ class UniVL(UniVLPreTrainedModel):
     #     loss = -(sequences_scores) * (reward - reward_baseline).detach()
     #     return loss.mean()
 
-    def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
+    def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None,
+                              gt_refs=None, sequence_output=None, attention_mask=None):
         if output_caption_ids is None:
             return torch.tensor(0.0, device=visual_output.device)
         if t5_output_caption_ids is None:
@@ -702,7 +708,11 @@ class UniVL(UniVLPreTrainedModel):
         t5_output_caption_ids = t5_output_caption_ids.view(-1, t5_output_caption_ids.shape[-1])
 
         with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            cross_output, _, _ = self._get_cross_output(visual_output, video_mask)
+            # Run cross-encoder on text+video (or video-only if no text available)
+            cross_output, _, _ = self._get_cross_output(
+                visual_output, video_mask,
+                sequence_output=sequence_output, attention_mask=attention_mask,
+            )
             inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
                 visual_output, video_mask, cross_output=cross_output
             )
@@ -824,15 +834,17 @@ class UniVL(UniVLPreTrainedModel):
         loss = -(sequences_scores * advantage.detach())
         return loss.mean()
 
-    def generate_caption_ids(self, visual_output, video_mask, num_beams=None, max_length=None):
+    def generate_caption_ids(self, visual_output, video_mask, num_beams=None, max_length=None,
+                              sequence_output=None, attention_mask=None):
         if num_beams is None:
             num_beams = max(1, getattr(self, "eval_beam_size", getattr(self, "beam_size", 1)))
         if max_length is None:
             max_length = getattr(self, "max_txt_len", 32)
 
-        with torch.amp.autocast(device_type="cuda",dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
+        with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
             inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
-                visual_output, video_mask
+                visual_output, video_mask,
+                sequence_output=sequence_output, attention_mask=attention_mask,
             )
             outputs = self.t5_model.generate(
                 inputs_embeds=inputs_embeds,
@@ -846,9 +858,11 @@ class UniVL(UniVLPreTrainedModel):
 
         return outputs
 
-    def generate_caption_text(self, visual_output, video_mask, num_beams=None, max_length=None):
+    def generate_caption_text(self, visual_output, video_mask, num_beams=None, max_length=None,
+                               sequence_output=None, attention_mask=None):
         output_ids = self.generate_caption_ids(
-            visual_output, video_mask, num_beams=num_beams, max_length=max_length
+            visual_output, video_mask, num_beams=num_beams, max_length=max_length,
+            sequence_output=sequence_output, attention_mask=attention_mask,
         )
         captions = self.t5_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
         return [caption.strip() for caption in captions]

@@ -40,15 +40,16 @@ def eval_epoch(
         pairs_t5_output_caption_ids = batch
 
         with torch.no_grad():
-            # Calculate validation loss
-            # forward() returns (loss, visual_output) in eval mode,
-            # so we can reuse visual_output for generation without re-encoding.
-            loss, visual_output = model(input_ids, segment_ids, input_mask, video, video_mask,
-                        pairs_masked_text=pairs_masked_text, pairs_token_labels=pairs_token_labels,
-                        masked_video=masked_video, video_labels_index=video_labels_index,
-                        input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
-                        output_caption_ids=pairs_output_caption_ids,
-                        t5_output_caption_ids=pairs_t5_output_caption_ids)
+            # Calculate validation loss.
+            # forward() returns (loss, visual_output, sequence_output, attention_mask) in eval mode
+            # so we can reuse all encoded features for generation without re-encoding.
+            loss, visual_output, sequence_output, text_attention_mask = model(
+                input_ids, segment_ids, input_mask, video, video_mask,
+                pairs_masked_text=pairs_masked_text, pairs_token_labels=pairs_token_labels,
+                masked_video=masked_video, video_labels_index=video_labels_index,
+                input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
+                output_caption_ids=pairs_output_caption_ids,
+                t5_output_caption_ids=pairs_t5_output_caption_ids)
             if loss is not None:
                 if n_gpu > 1:
                     loss = loss.mean()
@@ -59,7 +60,9 @@ def eval_epoch(
             eval_beam_size = max(1, getattr(model, "eval_beam_size", getattr(model, "beam_size", 1)))
             max_length = getattr(model, "max_txt_len", args.max_words)
             generated_ids = model.generate_caption_ids(
-                visual_output, video_mask, num_beams=eval_beam_size, max_length=max_length
+                visual_output, video_mask,
+                num_beams=eval_beam_size, max_length=max_length,
+                sequence_output=sequence_output, attention_mask=text_attention_mask,
             )
             all_result_lists.extend(model.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True))
 
