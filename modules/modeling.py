@@ -558,8 +558,11 @@ class UniVL(UniVLPreTrainedModel):
                 results.append(inst_dec_beams[inst_idx].get_hypothesis(tail_idxs[0]))
             return results
 
-        visual_output_rpt = visual_output.repeat(1, n_bm, 1).view(n_inst * n_bm, len_v, v_h)
-        video_mask_rpt = video_mask.repeat(1, n_bm).view(n_inst * n_bm, len_v)
+        # Replicate each instance n_bm times along the batch dim (interleaved).
+        # visual_output: (B, T, H) -> (B, 1, T, H) -> (B, n_bm, T, H) -> (B*n_bm, T, H)
+        visual_output_rpt = visual_output.unsqueeze(1).expand(-1, n_bm, -1, -1).contiguous().view(n_inst * n_bm, len_v, v_h)
+        # video_mask: (B, T) -> (B, 1, T) -> (B, n_bm, T) -> (B*n_bm, T)
+        video_mask_rpt = video_mask.unsqueeze(1).expand(-1, n_bm, -1).contiguous().view(n_inst * n_bm, len_v)
 
         inst_dec_beams = [Beam(n_bm, device=device, tokenizer=self.tokenizer) for _ in range(n_inst)]
         active_inst_idx_list = list(range(n_inst))
