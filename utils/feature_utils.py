@@ -3,7 +3,16 @@ import re
 
 def normalize_msrvtt_feature_dict(feature_dict, expected_video_ids):
     """Normalize MSRVTT feature dict keys to match video ids like 'video123'."""
-    if not isinstance(feature_dict, dict) or not expected_video_ids:
+    if not isinstance(feature_dict, dict):
+        return feature_dict
+    if expected_video_ids is None:
+        return feature_dict
+
+    try:
+        expected_len = len(expected_video_ids)
+    except TypeError:
+        expected_len = 0
+    if expected_len == 0:
         return feature_dict
 
     if any(key in expected_video_ids for key in feature_dict.keys()):
