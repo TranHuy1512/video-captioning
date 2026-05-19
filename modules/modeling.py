@@ -154,44 +154,7 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
         state_dict = UniVLPreTrainedModel._normalize_opt_checkpoint_state_dict(
             state_dict, task_config=task_config
         )
-        allowed_prefixes = (
-            "bert.",
-            "visual.",
-            "Qformer.",
-            "query_tokens",
-            "qformer_visual_proj.",
-            "opt_model.",
-            "opt_proj.",
-            "normalize_video.",
-        )
-        decoder_key_count = sum(
-            1 for key in state_dict.keys()
-            if key.startswith(("decoder.", "module.decoder.", "model.decoder."))
-        )
-        if decoder_key_count:
-            show_log(
-                task_config,
-                "Found {} legacy decoder.* tensors in init_model, but this caption path uses "
-                "OPT decoder weights under opt_model.* plus opt_proj.*. Legacy decoder tensors "
-                "will not be loaded.".format(decoder_key_count)
-            )
-
-        filtered_state_dict = state_dict.__class__(
-            (key, value) for key, value in state_dict.items()
-            if key.startswith(allowed_prefixes)
-        )
-        metadata = getattr(state_dict, "_metadata", None)
-        if metadata is not None:
-            filtered_state_dict._metadata = metadata
-
-        skipped = len(state_dict) - len(filtered_state_dict)
-        show_log(
-            task_config,
-            "Load init_model weights only for {} Skipped {} other tensors.".format(
-                ", ".join(allowed_prefixes), skipped
-            )
-        )
-        return filtered_state_dict
+        return state_dict
 
     @staticmethod
     def _normalize_common_checkpoint_prefixes(state_dict, task_config=None):
@@ -385,10 +348,17 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
                     module_name = key.split('.lora_A.')[0].split('.')[-1]
                     ckpt_lora_modules.add(module_name)
 
-            new_target_modules = set(
+            target_modules = (
                 getattr(task_config, 'lora_target_modules', ['q_proj', 'v_proj'])
                 if task_config is not None else ['q_proj', 'v_proj']
             )
+            shorthand_map = {
+                'q': 'q_proj',
+                'k': 'k_proj',
+                'v': 'v_proj',
+                'o': 'out_proj',
+            }
+            new_target_modules = set(shorthand_map.get(name, name) for name in target_modules)
             excess_modules = ckpt_lora_modules - new_target_modules
 
             if not excess_modules:
