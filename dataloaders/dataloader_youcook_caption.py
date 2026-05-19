@@ -23,7 +23,7 @@ class Youcook_Caption_DataLoader(Dataset):
             feature_framerate=1.0,
             max_words=30,
             max_frames=100,
-            t5_tokenizer=None,
+            opt_tokenizer=None,
             max_txt_len=32,
     ):
         """
@@ -36,7 +36,7 @@ class Youcook_Caption_DataLoader(Dataset):
         self.max_words = max_words
         self.max_frames = max_frames
         self.tokenizer = tokenizer
-        self.t5_tokenizer = t5_tokenizer
+        self.opt_tokenizer = opt_tokenizer
         self.max_txt_len = max_txt_len
 
         self.feature_size = self.feature_dict[self.csv["feature_file"].values[0]].shape[-1]
@@ -74,9 +74,9 @@ class Youcook_Caption_DataLoader(Dataset):
         pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
         pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.long)
 
-        # T5-tokenized ground truth for SCST training
-        t5_max_len = self.max_txt_len if self.t5_tokenizer is not None else self.max_words
-        pairs_t5_output_caption_ids = np.zeros((k, t5_max_len), dtype=np.long)
+        # OPT-tokenized ground truth for SCST training
+        opt_max_len = self.max_txt_len if self.opt_tokenizer is not None else self.max_words
+        pairs_opt_output_caption_ids = np.zeros((k, opt_max_len), dtype=np.long)
 
         for i in range(k):
             ind = r_ind[i]
@@ -169,21 +169,28 @@ class Youcook_Caption_DataLoader(Dataset):
             pairs_output_caption_ids[i] = np.array(output_caption_ids)
             pairs_decoder_mask[i] = np.array(decoder_mask)
 
-            # T5-tokenize the raw caption text for SCST ground truth
-            if self.t5_tokenizer is not None:
+            # OPT-tokenize the raw caption text for SCST ground truth
+            if self.opt_tokenizer is not None:
                 raw_caption = data_dict['text'][ind]
-                t5_tokens = self.t5_tokenizer(
+                opt_max_len = pairs_opt_output_caption_ids.shape[1]
+                token_ids = self.opt_tokenizer.encode(
                     raw_caption,
-                    padding="max_length",
+                    add_special_tokens=False,
                     truncation=True,
-                    max_length=t5_max_len,
-                    return_tensors="np",
+                    max_length=max(1, opt_max_len - 1),
                 )
-                pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
+                if self.opt_tokenizer.eos_token_id is not None:
+                    token_ids.append(self.opt_tokenizer.eos_token_id)
+                pad_id = self.opt_tokenizer.pad_token_id or 0
+                if len(token_ids) < opt_max_len:
+                    token_ids.extend([pad_id] * (opt_max_len - len(token_ids)))
+                else:
+                    token_ids = token_ids[:opt_max_len]
+                pairs_opt_output_caption_ids[i] = np.array(token_ids, dtype=np.long)
 
         return pairs_text, pairs_mask, pairs_segment, pairs_masked_text, pairs_token_labels,\
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
-               pairs_t5_output_caption_ids
+               pairs_opt_output_caption_ids
 
     def _get_video(self, idx, s, e):
         video_mask = np.zeros((len(s), self.max_frames), dtype=np.long)
@@ -238,11 +245,11 @@ class Youcook_Caption_DataLoader(Dataset):
         pairs_text, pairs_mask, pairs_segment, \
         pairs_masked_text, pairs_token_labels, pairs_input_caption_ids, \
         pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
-        pairs_t5_output_caption_ids = self._get_text(video_id, sub_id)
+        pairs_opt_output_caption_ids = self._get_text(video_id, sub_id)
 
         video, video_mask, masked_video, video_labels_index = self._get_video(idx, starts, ends)
 
         return pairs_text, pairs_mask, pairs_segment, video, video_mask, \
                pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-               pairs_t5_output_caption_ids, feature_idx
+               pairs_opt_output_caption_ids, feature_idx

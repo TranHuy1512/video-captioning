@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 import os
+import re
 from torch.utils.data import Dataset
 import numpy as np
 import pickle
@@ -23,10 +24,11 @@ class MSRVTT_Caption_DataLoader(Dataset):
             max_words=30,
             feature_framerate=1.0,
             max_frames=100,
-            split_type="",
-            t5_tokenizer=None,
+                split_type="",
+            opt_tokenizer=None,
             max_txt_len=32,
             scst=False,
+                use_small_dataset=False,
     ):
         self.csv = pd.read_csv(csv_path)
         self.data = json.load(open(json_path, 'r'))
@@ -35,7 +37,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.max_words = max_words
         self.max_frames = max_frames
         self.tokenizer = tokenizer
-        self.t5_tokenizer = t5_tokenizer
+        self.opt_tokenizer = opt_tokenizer
         self.max_txt_len = max_txt_len
 
         self.scst = scst
@@ -46,7 +48,21 @@ class MSRVTT_Caption_DataLoader(Dataset):
         # Val: video6513 : video7009 (497)
         # Test: video7010 : video9999 (2990)
         video_ids = [self.data['videos'][idx]['video_id'] for idx in range(len(self.data['videos']))]
-        split_dict = {"train": video_ids[:6513], "val": video_ids[6513:6513 + 497], "test": video_ids[6513 + 497:]}
+        if use_small_dataset:
+            def video_number(video_id):
+                return int(re.findall(r"\d+", video_id)[0])
+
+            split_dict = {
+                "train": [vid for vid in video_ids if video_number(vid) < 6513],
+                "val": [vid for vid in video_ids if 6513 <= video_number(vid) < 6513 + 497],
+                "test": [vid for vid in video_ids if video_number(vid) >= 6513 + 497],
+            }
+        else:
+            split_dict = {
+                "train": video_ids[:6513],
+                "val": video_ids[6513:6513 + 497],
+                "test": video_ids[6513 + 497:],
+            }
         choiced_video_ids = split_dict[split_type]
 
         self.sample_len = 0
@@ -93,9 +109,9 @@ class MSRVTT_Caption_DataLoader(Dataset):
         pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.int64)
         pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.int64)
 
-        # T5-tokenized ground truth for SCST training
-        t5_max_len = self.max_txt_len if self.t5_tokenizer is not None else self.max_words
-        pairs_t5_output_caption_ids = np.zeros((k, t5_max_len), dtype=np.int64)
+        # OPT-tokenized ground truth for SCST training
+        opt_max_len = self.max_txt_len if self.opt_tokenizer is not None else self.max_words
+        pairs_opt_output_caption_ids = np.zeros((k, opt_max_len), dtype=np.int64)
 
         for i, video_id in enumerate(choice_video_ids):
             words = []
@@ -183,21 +199,28 @@ class MSRVTT_Caption_DataLoader(Dataset):
             pairs_output_caption_ids[i] = np.array(output_caption_ids)
             pairs_decoder_mask[i] = np.array(decoder_mask)
 
-            # T5-tokenize the raw caption text for SCST ground truth
-            if self.t5_tokenizer is not None:
+            # OPT-tokenize the raw caption text for SCST ground truth
+            if self.opt_tokenizer is not None:
                 raw_caption = caption if caption is not None else ""
-                t5_tokens = self.t5_tokenizer(
+                opt_max_len = pairs_opt_output_caption_ids.shape[1]
+                token_ids = self.opt_tokenizer.encode(
                     raw_caption,
-                    padding="max_length",
+                    add_special_tokens=False,
                     truncation=True,
-                    max_length=t5_max_len,
-                    return_tensors="np",
+                    max_length=max(1, opt_max_len - 1),
                 )
-                pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
+                if self.opt_tokenizer.eos_token_id is not None:
+                    token_ids.append(self.opt_tokenizer.eos_token_id)
+                pad_id = self.opt_tokenizer.pad_token_id or 0
+                if len(token_ids) < opt_max_len:
+                    token_ids.extend([pad_id] * (opt_max_len - len(token_ids)))
+                else:
+                    token_ids = token_ids[:opt_max_len]
+                pairs_opt_output_caption_ids[i] = np.array(token_ids, dtype=np.int64)
 
         return pairs_text, pairs_mask, pairs_segment, pairs_masked_text, pairs_token_labels, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, choice_video_ids, \
-               pairs_t5_output_caption_ids
+               pairs_opt_output_caption_ids
 
     # def _get_single_text(self, video_id):
     #     rind = random.randint(0, len(self.sentences[video_id]) - 1)
@@ -266,11 +289,11 @@ class MSRVTT_Caption_DataLoader(Dataset):
         pairs_masked_text, pairs_token_labels, \
         pairs_input_caption_ids, pairs_decoder_mask, \
         pairs_output_caption_ids, choice_video_ids, \
-        pairs_t5_output_caption_ids = self._get_text(video_id, caption)
+        pairs_opt_output_caption_ids = self._get_text(video_id, caption)
 
         video, video_mask, masked_video, video_labels_index = self._get_video(choice_video_ids)
 
         return pairs_text, pairs_mask, pairs_segment, video, video_mask, \
                pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-               pairs_t5_output_caption_ids, idx
+               pairs_opt_output_caption_ids, idx

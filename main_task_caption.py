@@ -83,8 +83,8 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument("--local_rank", default=None, type=int, help="distribted training")
     parser.add_argument('--coef_lr', type=float, default=0.1, help='coefficient for bert branch.')
     parser.add_argument('--lr_qformer', type=float, default=5e-5, help='Learning rate for QFormer parameters.')
-    parser.add_argument('--lr_lora', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
-                        help='Learning rate for T5 LoRA/decoder parameters.')
+    parser.add_argument('--lr_lora', '--lr_opt_decoder', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
+                        help='Learning rate for OPT LoRA/decoder parameters.')
     parser.add_argument('--use_mil', action='store_true', help="Whether use MIL as Miech et. al. (2020).")
     parser.add_argument('--sampled_use_mil', action='store_true', help="Whether use MIL, has a high priority than use_mil.")
 
@@ -103,28 +103,30 @@ def get_args(description='UniVL on Caption Task'):
                         help="Number of beam candidates per video for SCST training.")
     parser.add_argument('--beam_size', type=int, default=None,
                         help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
-    parser.add_argument('--t5_model', type=str, default='google/flan-t5-xl', help="T5 model name.")
-    parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum text length for T5 tokenizer.")
+    parser.add_argument('--opt_model', type=str, default='Salesforce/blip2-opt-2.7b', help="OPT model name.")
+    parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum text length for OPT tokenizer.")
     parser.add_argument('--num_query_token', type=int, default=32, help="Number of Qformer query tokens.")
     parser.add_argument('--qformer_vision_width', type=int, default=768,
                         help="Encoder feature width expected by QFormer cross-attention.")
-    parser.add_argument('--qformer_checkpoint', type=str, default='',
+    parser.add_argument('--qformer_checkpoint', type=str, default='Salesforce/blip2-opt-2.7b',
                         help="Optional local path or Hugging Face repo id for QFormer weights.")
     parser.add_argument('--qformer_checkpoint_file', type=str, default='',
                         help="Optional exact checkpoint filename inside the QFormer checkpoint repo/path.")
     parser.add_argument('--qformer_checkpoint_local_files_only', action='store_true',
                         help="Load QFormer checkpoint from local Hugging Face cache only.")
+    parser.add_argument('--use_small_dataset', action='store_true',
+                        help="Use numeric MSRVTT split from video ids instead of fixed index ranges.")
     parser.add_argument('--qformer_diversity_weight', type=float, default=0.0,
                         help="Weight for Q-Former query token diversity regularization loss "
                              "(0.0 to disable). Penalises high cosine similarity between different "
                              "query tokens to encourage specialization. Default: 0.0")
-    parser.add_argument('--lora', action='store_true', help="Enable LoRA for T5.")
+    parser.add_argument('--lora', action='store_true', help="Enable LoRA for OPT.")
     parser.add_argument('--lora_r', type=int, default=16, help="LoRA rank.")
     parser.add_argument('--lora_alpha', type=int, default=32, help="LoRA alpha.")
     parser.add_argument('--lora_dropout', type=float, default=0.05, help="LoRA dropout.")
     parser.add_argument('--lora_target_modules', type=str, default='q,v',
                         help="Comma-separated LoRA target module names (default: 'q,v'). "
-                             "Use 'q,k,v,o' to match the old 4-module config.")
+                            "For OPT, 'q'/'v' are mapped to 'q_proj'/'v_proj'.")
 
     parser.add_argument('--stage_two', action='store_true', help="Whether training with decoder.")
     args = parser.parse_args()
@@ -161,8 +163,8 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
     model = init_model(args, device, n_gpu, args.local_rank)
 
-    # Get T5 tokenizer from model for dataloader T5 tokenization (used by SCST)
-    t5_tokenizer = getattr(model, 't5_tokenizer', None)
+    # Get OPT tokenizer from model for caption tokenization (used by SCST)
+    opt_tokenizer = getattr(model, 'opt_tokenizer', None)
 
     assert args.task_type == "caption"
     
@@ -176,7 +178,7 @@ def main():
             logger.warning("pycocoevalcap not available. Evaluation metrics will be skipped.")
 
     assert args.datatype in DATALOADER_DICT
-    test_dataloader, test_length = DATALOADER_DICT[args.datatype]["val"](args, tokenizer, logger, t5_tokenizer=t5_tokenizer)
+    test_dataloader, test_length = DATALOADER_DICT[args.datatype]["val"](args, tokenizer, logger, opt_tokenizer=opt_tokenizer)
     if args.local_rank == 0:
         logger.info("***** Running test *****")
         logger.info("  Num examples = %d", test_length)
@@ -184,7 +186,7 @@ def main():
         logger.info("  Num steps = %d", len(test_dataloader))
 
     if args.do_train:
-        train_dataloader, train_length, train_sampler = DATALOADER_DICT[args.datatype]["train"](args, tokenizer, t5_tokenizer=t5_tokenizer)
+        train_dataloader, train_length, train_sampler = DATALOADER_DICT[args.datatype]["train"](args, tokenizer, opt_tokenizer=opt_tokenizer)
         num_train_optimization_steps = (int(len(train_dataloader) + args.gradient_accumulation_steps - 1)
                                         / args.gradient_accumulation_steps) * args.epochs
 
