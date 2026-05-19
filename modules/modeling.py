@@ -148,6 +148,9 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
     @staticmethod
     def _filter_init_model_state_dict(state_dict, task_config=None):
+        state_dict = UniVLPreTrainedModel._normalize_common_checkpoint_prefixes(
+            state_dict, task_config=task_config
+        )
         state_dict = UniVLPreTrainedModel._normalize_opt_checkpoint_state_dict(
             state_dict, task_config=task_config
         )
@@ -161,6 +164,18 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             "opt_proj.",
             "normalize_video.",
         )
+        decoder_key_count = sum(
+            1 for key in state_dict.keys()
+            if key.startswith(("decoder.", "module.decoder.", "model.decoder."))
+        )
+        if decoder_key_count:
+            show_log(
+                task_config,
+                "Found {} legacy decoder.* tensors in init_model, but this caption path uses "
+                "OPT decoder weights under opt_model.* plus opt_proj.*. Legacy decoder tensors "
+                "will not be loaded.".format(decoder_key_count)
+            )
+
         filtered_state_dict = state_dict.__class__(
             (key, value) for key, value in state_dict.items()
             if key.startswith(allowed_prefixes)
@@ -177,6 +192,92 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
             )
         )
         return filtered_state_dict
+
+    @staticmethod
+    def _normalize_common_checkpoint_prefixes(state_dict, task_config=None):
+        """Map common wrapper/BLIP2 prefixes to this UniVL module layout."""
+        state_dict_cls = state_dict.__class__
+        normalized_state = state_dict_cls()
+        metadata = getattr(state_dict, "_metadata", None)
+        if metadata is not None:
+            normalized_state._metadata = metadata
+
+        def strip_wrappers(key):
+            wrapper_prefixes = ("module.",)
+            changed = True
+            while changed:
+                changed = False
+                for prefix in wrapper_prefixes:
+                    if key.startswith(prefix):
+                        key = key[len(prefix):]
+                        changed = True
+                        break
+            return key
+
+        def map_qformer_suffix(suffix):
+            if suffix.startswith(("bert.", "cls.")):
+                return "Qformer." + suffix
+            if suffix.startswith(("encoder.", "embeddings.", "pooler.")):
+                return "Qformer.bert." + suffix
+            return "Qformer." + suffix
+
+        def normalize_key(key):
+            key = strip_wrappers(key)
+
+            exact_rules = {
+                "model.query_tokens": "query_tokens",
+                "blip2.query_tokens": "query_tokens",
+            }
+            if key in exact_rules:
+                return exact_rules[key]
+
+            qformer_prefixes = (
+                "model.Qformer.",
+                "model.qformer.",
+                "blip2.qformer.",
+                "blip2opt.qformer.",
+                "Qformer.",
+                "qformer.",
+            )
+            for prefix in qformer_prefixes:
+                if key.startswith(prefix):
+                    return map_qformer_suffix(key[len(prefix):])
+
+            prefix_rules = (
+                ("model.qformer_visual_proj.", "qformer_visual_proj."),
+                ("language_projection.", "opt_proj."),
+                ("model.language_projection.", "opt_proj."),
+                ("language_model.", "opt_model."),
+                ("model.language_model.", "opt_model."),
+                ("model.opt_model.", "opt_model."),
+                ("model.opt_proj.", "opt_proj."),
+                ("model.normalize_video.", "normalize_video."),
+                ("model.visual.", "visual."),
+                ("model.bert.", "bert."),
+            )
+            for old_prefix, new_prefix in prefix_rules:
+                if key.startswith(old_prefix):
+                    return new_prefix + key[len(old_prefix):]
+            return key
+
+        renamed = 0
+        collisions = 0
+        for key, value in state_dict.items():
+            new_key = normalize_key(key)
+            renamed += int(new_key != key)
+            if new_key in normalized_state:
+                collisions += 1
+                continue
+            normalized_state[new_key] = value
+
+        if renamed or collisions:
+            show_log(
+                task_config,
+                "Normalized common checkpoint prefixes: renamed {} tensors, dropped {} collisions.".format(
+                    renamed, collisions
+                )
+            )
+        return normalized_state
 
     @staticmethod
     def _normalize_opt_checkpoint_state_dict(state_dict, task_config=None):
