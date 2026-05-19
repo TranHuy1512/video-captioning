@@ -28,7 +28,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers import OPTConfig, OPTForCausalLM, AutoTokenizer
+from transformers import Blip2ForConditionalGeneration, AutoProcessor
 
 
 from modules.until_module import PreTrainedModel, LayerNorm, CrossEn, MILNCELoss, MaxMarginRankingLoss
@@ -495,6 +495,24 @@ class UniVL(UniVLPreTrainedModel):
             resolved.append(mapping.get(name, name))
         return resolved
 
+    @staticmethod
+    def _load_blip2_language_components(model_name):
+        processor = AutoProcessor.from_pretrained(model_name)
+        tokenizer = getattr(processor, "tokenizer", None)
+        if tokenizer is None:
+            raise ValueError(
+                "AutoProcessor for {} does not expose a tokenizer.".format(model_name)
+            )
+
+        blip2_model = Blip2ForConditionalGeneration.from_pretrained(model_name)
+        language_model = blip2_model.language_model
+        language_projection_state = {
+            name: tensor.detach().clone()
+            for name, tensor in blip2_model.language_projection.state_dict().items()
+        }
+        del blip2_model
+        return tokenizer, language_model, language_projection_state
+
     def __init__(self, bert_config, visual_config, cross_config, decoder_config, task_config):
         super(UniVL, self).__init__(bert_config, visual_config, cross_config, decoder_config)
         self.task_config = task_config
@@ -590,14 +608,13 @@ class UniVL(UniVLPreTrainedModel):
                 self.prompt = "A video of"
 
                 opt_model_name = getattr(self.task_config, "opt_model", "Salesforce/blip2-opt-2.7b")
-                self.opt_tokenizer = AutoTokenizer.from_pretrained(opt_model_name, use_fast=False)
+                self.opt_tokenizer, self.opt_model, language_projection_state = (
+                    self._load_blip2_language_components(opt_model_name)
+                )
+                opt_hidden_size = self.opt_model.config.hidden_size
                 if self.opt_tokenizer.pad_token_id is None:
                     self.opt_tokenizer.pad_token = self.opt_tokenizer.eos_token
 
-                opt_config = OPTConfig.from_pretrained(opt_model_name)
-                self.opt_model = OPTForCausalLM.from_pretrained(
-                    opt_model_name, config=opt_config,
-                )
                 for name, param in self.opt_model.named_parameters():
                     param.requires_grad = False
                     param.data = param.data.bfloat16()
@@ -627,8 +644,26 @@ class UniVL(UniVLPreTrainedModel):
                     self.opt_model.print_trainable_parameters()
 
                 self.opt_proj = nn.Linear(
-                    self.Qformer.config.hidden_size, self.opt_model.config.hidden_size
+                    self.Qformer.config.hidden_size, opt_hidden_size
                 )
+                if language_projection_state:
+                    opt_proj_state = self.opt_proj.state_dict()
+                    compatible_projection_state = {
+                        name: tensor
+                        for name, tensor in language_projection_state.items()
+                        if name in opt_proj_state and tuple(tensor.shape) == tuple(opt_proj_state[name].shape)
+                    }
+                    load_result = self.opt_proj.load_state_dict(compatible_projection_state, strict=False)
+                    skipped_projection_keys = sorted(
+                        set(language_projection_state.keys()) - set(compatible_projection_state.keys())
+                    )
+                    if load_result.missing_keys or load_result.unexpected_keys or skipped_projection_keys:
+                        show_log(
+                            task_config,
+                            "BLIP2 language_projection partially loaded into opt_proj: missing={}, unexpected={}, skipped_shape={}.".format(
+                                load_result.missing_keys, load_result.unexpected_keys, skipped_projection_keys
+                            )
+                        )
                 # <=== End of Decoder
 
             if self.task_config.do_pretrain:
