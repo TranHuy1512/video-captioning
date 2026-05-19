@@ -63,6 +63,7 @@ def dataloader_youcook_test(args, tokenizer, logger, t5_tokenizer=None):
 def dataloader_msrvtt_train(args, tokenizer, t5_tokenizer=None):
     max_txt_len = getattr(args, 'max_txt_len', 32)
     scst = getattr(args, 'scst', False)
+    use_small_dataset = getattr(args, 'use_small_dataset', False)
     msrvtt_dataset = MSRVTT_Caption_DataLoader(
         csv_path=args.train_csv,
         json_path=args.data_path,
@@ -75,6 +76,7 @@ def dataloader_msrvtt_train(args, tokenizer, t5_tokenizer=None):
         t5_tokenizer=t5_tokenizer,
         max_txt_len=max_txt_len,
         scst=scst,
+        use_small_dataset=use_small_dataset,
     )
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(msrvtt_dataset)
@@ -93,6 +95,7 @@ def dataloader_msrvtt_train(args, tokenizer, t5_tokenizer=None):
 
 def dataloader_msrvtt_test(args, tokenizer, logger=None, split_type="test", t5_tokenizer=None):
     max_txt_len = getattr(args, 'max_txt_len', 32)
+    use_small_dataset = getattr(args, 'use_small_dataset', False)
     msrvtt_testset = MSRVTT_Caption_DataLoader(
         csv_path=args.val_csv,
         json_path=args.data_path,
@@ -104,6 +107,7 @@ def dataloader_msrvtt_test(args, tokenizer, logger=None, split_type="test", t5_t
         split_type=split_type,
         t5_tokenizer=t5_tokenizer,
         max_txt_len=max_txt_len,
+        use_small_dataset=use_small_dataset,
     )
 
     test_sampler = SequentialSampler(msrvtt_testset)

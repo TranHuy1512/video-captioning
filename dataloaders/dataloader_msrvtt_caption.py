@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 import os
+import re
 from torch.utils.data import Dataset
 import numpy as np
 import pickle
@@ -11,6 +12,7 @@ import pandas as pd
 from collections import defaultdict
 import json
 import random
+from utils.feature_utils import normalize_msrvtt_feature_dict
 
 class MSRVTT_Caption_DataLoader(Dataset):
     """MSRVTT train dataset loader."""
@@ -27,10 +29,17 @@ class MSRVTT_Caption_DataLoader(Dataset):
             t5_tokenizer=None,
             max_txt_len=32,
             scst=False,
+            use_small_dataset=False,
     ):
         self.csv = pd.read_csv(csv_path)
-        self.data = json.load(open(json_path, 'r'))
-        self.feature_dict = pickle.load(open(features_path, 'rb'))
+        with open(json_path, 'r', encoding='utf-8') as json_file:
+            self.data = json.load(json_file)
+        with open(features_path, 'rb') as feature_file:
+            self.feature_dict = pickle.load(feature_file)
+        self.feature_dict = normalize_msrvtt_feature_dict(
+            self.feature_dict,
+            self.csv['video_id'].values,
+        )
         self.feature_framerate = feature_framerate
         self.max_words = max_words
         self.max_frames = max_frames
@@ -39,15 +48,37 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.max_txt_len = max_txt_len
 
         self.scst = scst
-        self.feature_size = self.feature_dict[self.csv['video_id'].values[0]].shape[-1]
+        self.feature_size = None
+        for video_id in self.csv['video_id'].values:
+            if video_id in self.feature_dict:
+                self.feature_size = self.feature_dict[video_id].shape[-1]
+                break
+        if self.feature_size is None:
+            raise KeyError("No matching video_id found in features for MSRVTT captions.")
 
         assert split_type in ["train", "val", "test"]
         # Train: video0 : video6512 (6513)
         # Val: video6513 : video7009 (497)
         # Test: video7010 : video9999 (2990)
         video_ids = [self.data['videos'][idx]['video_id'] for idx in range(len(self.data['videos']))]
-        split_dict = {"train": video_ids[:6513], "val": video_ids[6513:6513 + 497], "test": video_ids[6513 + 497:]}
+        if use_small_dataset:
+            def video_number(video_id):
+                return int(re.findall(r"\d+", video_id)[0])
+
+            split_dict = {
+                "train": [vid for vid in video_ids if video_number(vid) < 6513],
+                "val": [vid for vid in video_ids if 6513 <= video_number(vid) < 6513 + 497],
+                "test": [vid for vid in video_ids if video_number(vid) >= 6513 + 497],
+            }
+        else:
+            split_dict = {
+                "train": video_ids[:6513],
+                "val": video_ids[6513:6513 + 497],
+                "test": video_ids[6513 + 497:],
+            }
         choiced_video_ids = split_dict[split_type]
+        if use_small_dataset:
+            choiced_video_ids = [vid for vid in choiced_video_ids if vid in self.feature_dict]
 
         self.sample_len = 0
         self.sentences_dict = {}

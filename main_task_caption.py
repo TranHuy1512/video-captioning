@@ -114,6 +114,8 @@ def get_args(description='UniVL on Caption Task'):
                         help="Optional exact checkpoint filename inside the QFormer checkpoint repo/path.")
     parser.add_argument('--qformer_checkpoint_local_files_only', action='store_true',
                         help="Load QFormer checkpoint from local Hugging Face cache only.")
+    parser.add_argument('--use_small_dataset', action='store_true',
+                        help="Use numeric MSRVTT split from video ids and keep only videos present in features.")
     parser.add_argument('--qformer_diversity_weight', type=float, default=0.0,
                         help="Weight for Q-Former query token diversity regularization loss "
                              "(0.0 to disable). Penalises high cosine similarity between different "
