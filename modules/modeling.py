@@ -28,7 +28,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers import OPTConfig, OPTForCausalLM, OPTTokenizer
+from transformers import OPTConfig, OPTForCausalLM, AutoTokenizer
 
 
 from modules.until_module import PreTrainedModel, LayerNorm, CrossEn, MILNCELoss, MaxMarginRankingLoss
@@ -450,7 +450,7 @@ class UniVL(UniVLPreTrainedModel):
                 self.prompt = "A video of"
 
                 opt_model_name = getattr(self.task_config, "opt_model", "Salesforce/blip2-opt-2.7b")
-                self.opt_tokenizer = OPTTokenizer.from_pretrained(opt_model_name, use_fast=False)
+                self.opt_tokenizer = AutoTokenizer.from_pretrained(opt_model_name, use_fast=False)
                 if self.opt_tokenizer.pad_token_id is None:
                     self.opt_tokenizer.pad_token = self.opt_tokenizer.eos_token
 

@@ -11,6 +11,7 @@ import pandas as pd
 from collections import defaultdict
 import json
 import random
+from utils.feature_utils import normalize_msrvtt_feature_dict
 
 class MSRVTT_DataLoader(Dataset):
     """MSRVTT dataset loader."""
@@ -25,6 +26,10 @@ class MSRVTT_DataLoader(Dataset):
     ):
         self.data = pd.read_csv(csv_path)
         self.feature_dict = pickle.load(open(features_path, 'rb'))
+        self.feature_dict = normalize_msrvtt_feature_dict(
+            self.feature_dict,
+            self.data['video_id'].values,
+        )
         self.feature_framerate = feature_framerate
         self.max_words = max_words
         self.max_frames = max_frames
@@ -178,6 +183,10 @@ class MSRVTT_TrainDataLoader(Dataset):
         self.csv = pd.read_csv(csv_path)
         self.data = json.load(open(json_path, 'r'))
         self.feature_dict = pickle.load(open(features_path, 'rb'))
+        self.feature_dict = normalize_msrvtt_feature_dict(
+            self.feature_dict,
+            self.csv['video_id'].values,
+        )
         self.feature_framerate = feature_framerate
         self.max_words = max_words
         self.max_frames = max_frames

@@ -12,6 +12,7 @@ import pandas as pd
 from collections import defaultdict
 import json
 import random
+from utils.feature_utils import normalize_msrvtt_feature_dict
 
 class MSRVTT_Caption_DataLoader(Dataset):
     """MSRVTT train dataset loader."""
@@ -31,8 +32,14 @@ class MSRVTT_Caption_DataLoader(Dataset):
                 use_small_dataset=False,
     ):
         self.csv = pd.read_csv(csv_path)
-        self.data = json.load(open(json_path, 'r'))
-        self.feature_dict = pickle.load(open(features_path, 'rb'))
+        with open(json_path, 'r', encoding='utf-8') as json_file:
+            self.data = json.load(json_file)
+        with open(features_path, 'rb') as feature_file:
+            self.feature_dict = pickle.load(feature_file)
+        self.feature_dict = normalize_msrvtt_feature_dict(
+            self.feature_dict,
+            self.csv['video_id'].values,
+        )
         self.feature_framerate = feature_framerate
         self.max_words = max_words
         self.max_frames = max_frames
@@ -41,7 +48,13 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.max_txt_len = max_txt_len
 
         self.scst = scst
-        self.feature_size = self.feature_dict[self.csv['video_id'].values[0]].shape[-1]
+        self.feature_size = None
+        for video_id in self.csv['video_id'].values:
+            if video_id in self.feature_dict:
+                self.feature_size = self.feature_dict[video_id].shape[-1]
+                break
+        if self.feature_size is None:
+            raise KeyError("No matching video_id found in features for MSRVTT captions.")
 
         assert split_type in ["train", "val", "test"]
         # Train: video0 : video6512 (6513)
@@ -64,6 +77,8 @@ class MSRVTT_Caption_DataLoader(Dataset):
                 "test": video_ids[6513 + 497:],
             }
         choiced_video_ids = split_dict[split_type]
+        if use_small_dataset:
+            choiced_video_ids = [vid for vid in choiced_video_ids if vid in self.feature_dict]
 
         self.sample_len = 0
         self.sentences_dict = {}
