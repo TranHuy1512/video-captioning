@@ -103,9 +103,48 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
         if state_dict is not None:
             state_dict = cls._filter_init_model_state_dict(state_dict, task_config=task_config)
+            state_dict = cls._filter_state_dict_by_shape(model, state_dict, task_config=task_config)
             model = cls.init_preweight(model, state_dict, task_config=task_config)
 
         return model
+
+    @staticmethod
+    def _filter_state_dict_by_shape(model, state_dict, task_config=None):
+        """Drop checkpoint tensors whose shape cannot be loaded into this run.
+
+        This keeps partial checkpoint loading explicit. A common caption setup
+        uses CLIP/ViT-L features with width 768 while older UniVL checkpoints
+        store S3D-width 1024 visual tensors; passing them to load_state_dict
+        only emits an error and leaves those modules randomly initialized.
+        """
+        model_state = model.state_dict()
+        filtered_state = state_dict.__class__()
+        metadata = getattr(state_dict, "_metadata", None)
+        if metadata is not None:
+            filtered_state._metadata = metadata
+
+        skipped = []
+        for key, value in state_dict.items():
+            target = model_state.get(key)
+            if target is not None and tuple(target.shape) != tuple(value.shape):
+                skipped.append((key, tuple(value.shape), tuple(target.shape)))
+                continue
+            filtered_state[key] = value
+
+        if skipped:
+            preview = "; ".join(
+                "{} ckpt{} != model{}".format(key, src_shape, dst_shape)
+                for key, src_shape, dst_shape in skipped[:8]
+            )
+            if len(skipped) > 8:
+                preview += "; ..."
+            show_log(
+                task_config,
+                "Skipped {} init_model tensors with incompatible shapes: {}".format(
+                    len(skipped), preview
+                ),
+            )
+        return filtered_state
 
     @staticmethod
     def _filter_init_model_state_dict(state_dict, task_config=None):
@@ -758,7 +797,7 @@ class UniVL(UniVLPreTrainedModel):
         pad_token_id = self.opt_tokenizer.pad_token_id
         caption_ids = output_caption_ids.clone()
         caption_ids = caption_ids.masked_fill(caption_ids.lt(0), pad_token_id)
-        caption_mask = caption_ids.ne(pad_token_id).long()
+        caption_mask, caption_labels = self._build_opt_caption_mask_and_labels(caption_ids)
 
         caption_embeds = self.opt_model.get_input_embeddings()(caption_ids)
         inputs_embeds = torch.cat([context_embeds, caption_embeds], dim=1)
@@ -770,7 +809,7 @@ class UniVL(UniVLPreTrainedModel):
             dtype=torch.long,
             device=context_embeds.device,
         )
-        labels = torch.cat([ignore_prefix, caption_ids], dim=1)
+        labels = torch.cat([ignore_prefix, caption_labels], dim=1)
 
         outputs = self.opt_model(
             inputs_embeds=inputs_embeds,
@@ -779,6 +818,34 @@ class UniVL(UniVLPreTrainedModel):
             labels=labels,
         )
         return outputs.loss
+
+    def _build_opt_caption_mask_and_labels(self, caption_ids):
+        """Build OPT attention mask and labels while preserving the true EOS.
+
+        OPT has no native pad token, so this project sets pad_token=eos_token.
+        A plain `caption_ids == pad_token_id` mask therefore also hides the
+        first real EOS target. Keep tokens through the first EOS and ignore only
+        the EOS values that are padding after it.
+        """
+        pad_token_id = self.opt_tokenizer.pad_token_id
+        eos_token_id = self.opt_tokenizer.eos_token_id
+        if pad_token_id is None:
+            caption_mask = torch.ones_like(caption_ids, dtype=torch.long)
+            return caption_mask, caption_ids
+
+        if eos_token_id is None or pad_token_id != eos_token_id:
+            caption_mask = caption_ids.ne(pad_token_id).long()
+            caption_labels = caption_ids.masked_fill(caption_mask.eq(0), -100)
+            return caption_mask, caption_labels
+
+        eos_hits = caption_ids.eq(eos_token_id)
+        eos_seen = eos_hits.cumsum(dim=1)
+        caption_mask = eos_seen.le(1).long()
+        if caption_ids.size(1) > 0:
+            caption_mask[:, 0] = 1
+
+        caption_labels = caption_ids.masked_fill(caption_mask.eq(0), -100)
+        return caption_mask, caption_labels
 
     # def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None):
     #     from pycocoevalcap.cider.cider import Cider
@@ -967,13 +1034,14 @@ class UniVL(UniVLPreTrainedModel):
 
         decoder_input_ids = caption_ids[:, :-1]
         labels = caption_ids[:, 1:]
-        labels_mask = labels.ne(pad_token_id)
+        _, labels_for_score = self._build_opt_caption_mask_and_labels(labels)
+        labels_mask = labels_for_score.ne(-100)
 
         repeated_context_embeds = context_embeds.repeat_interleave(self.scst_num_samples, dim=0)
         repeated_context_atts = context_atts.repeat_interleave(self.scst_num_samples, dim=0)
         caption_embeds = self.opt_model.get_input_embeddings()(decoder_input_ids)
         inputs_embeds = torch.cat([repeated_context_embeds, caption_embeds], dim=1)
-        caption_mask = decoder_input_ids.ne(pad_token_id).long()
+        caption_mask, _ = self._build_opt_caption_mask_and_labels(decoder_input_ids)
         attention_mask = torch.cat([repeated_context_atts, caption_mask], dim=1)
 
         score_outputs = self.opt_model(
