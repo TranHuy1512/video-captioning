@@ -28,7 +28,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers import T5TokenizerFast
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 from modules.until_module import PreTrainedModel, LayerNorm, CrossEn, MILNCELoss, MaxMarginRankingLoss
@@ -37,8 +37,6 @@ from modules.module_visual import VisualModel, VisualConfig, VisualOnlyMLMHead
 from modules.module_cross import CrossModel, CrossConfig
 from modules.module_decoder import DecoderConfig
 from modules.blip2 import Blip2Base, disabled_train
-# from modules.modeling_t5 import T5Config, T5ForConditionalGeneration
-from transformers import T5Config, T5ForConditionalGeneration
 
 
 from peft import LoraConfig, TaskType, get_peft_model
@@ -106,50 +104,135 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
         if state_dict is not None:
             state_dict = cls._filter_init_model_state_dict(state_dict, task_config=task_config)
+            cls._log_init_model_coverage(model, state_dict, task_config=task_config)
             model = cls.init_preweight(model, state_dict, task_config=task_config)
 
         return model
 
     @staticmethod
     def _filter_init_model_state_dict(state_dict, task_config=None):
-        state_dict = UniVLPreTrainedModel._normalize_t5_checkpoint_state_dict(
+        state_dict = UniVLPreTrainedModel._normalize_common_checkpoint_prefixes(
             state_dict, task_config=task_config
         )
-        allowed_prefixes = (
-            "bert.",
-            "visual.",
-            "Qformer.",
-            "query_tokens",
-            "qformer_visual_proj.",
-            "t5_model.",
-            "t5_proj.",
-            "normalize_video.",
+        state_dict = UniVLPreTrainedModel._normalize_qwen_checkpoint_state_dict(
+            state_dict, task_config=task_config
         )
-        filtered_state_dict = state_dict.__class__(
-            (key, value) for key, value in state_dict.items()
-            if key.startswith(allowed_prefixes)
-        )
-        metadata = getattr(state_dict, "_metadata", None)
-        if metadata is not None:
-            filtered_state_dict._metadata = metadata
-
-        skipped = len(state_dict) - len(filtered_state_dict)
-        show_log(
-            task_config,
-            "Load init_model weights only for {} Skipped {} other tensors.".format(
-                ", ".join(allowed_prefixes), skipped
-            )
-        )
-        return filtered_state_dict
+        show_log(task_config, "Load all init_model tensors after normalization: {} tensors.".format(len(state_dict)))
+        return state_dict
 
     @staticmethod
-    def _normalize_t5_checkpoint_state_dict(state_dict, task_config=None):
-        has_lora_t5_keys = any(
-            key.startswith("t5_model.base_model.model.") for key in state_dict.keys()
+    def _log_init_model_coverage(model, state_dict, task_config=None):
+        model_state = model.state_dict()
+        matching_name = 0
+        matching_shape = 0
+        shape_mismatch = []
+        unexpected = []
+
+        for key, value in state_dict.items():
+            target = model_state.get(key)
+            if target is None:
+                unexpected.append(key)
+                continue
+            matching_name += 1
+            if tuple(target.shape) == tuple(value.shape):
+                matching_shape += 1
+            else:
+                shape_mismatch.append((key, tuple(value.shape), tuple(target.shape)))
+
+        missing = [key for key in model_state.keys() if key not in state_dict]
+        show_log(
+            task_config,
+            "init_model coverage: total_ckpt={}, name_match={}, shape_match={}, shape_mismatch={}, unexpected={}, missing_model_keys={}.".format(
+                len(state_dict),
+                matching_name,
+                matching_shape,
+                len(shape_mismatch),
+                len(unexpected),
+                len(missing),
+            ),
+        )
+        if shape_mismatch:
+            show_log(
+                task_config,
+                "First init_model shape mismatches: {}".format(shape_mismatch[:10])
+            )
+        if unexpected:
+            show_log(
+                task_config,
+                "First unexpected init_model keys: {}".format(unexpected[:10])
+            )
+
+    @staticmethod
+    def _normalize_common_checkpoint_prefixes(state_dict, task_config=None):
+        state_dict_cls = state_dict.__class__
+        normalized_state = state_dict_cls()
+        metadata = getattr(state_dict, "_metadata", None)
+        if metadata is not None:
+            normalized_state._metadata = metadata
+
+        def map_qformer_suffix(suffix):
+            if suffix.startswith(("bert.", "cls.")):
+                return "Qformer." + suffix
+            if suffix.startswith(("encoder.", "embeddings.", "pooler.")):
+                return "Qformer.bert." + suffix
+            return "Qformer." + suffix
+
+        def normalize_key(key):
+            while key.startswith("module."):
+                key = key[len("module."):]
+            if key in ("model.query_tokens", "blip2.query_tokens"):
+                return "query_tokens"
+            for prefix in ("model.Qformer.", "model.qformer.", "blip2.qformer.", "blip2opt.qformer.", "Qformer.", "qformer."):
+                if key.startswith(prefix):
+                    return map_qformer_suffix(key[len(prefix):])
+            prefix_rules = (
+                ("model.qformer_visual_proj.", "qformer_visual_proj."),
+                ("language_projection.", "qwen_proj."),
+                ("model.language_projection.", "qwen_proj."),
+                ("language_model.", "qwen_model."),
+                ("model.language_model.", "qwen_model."),
+                ("model.qwen_model.", "qwen_model."),
+                ("model.qwen_proj.", "qwen_proj."),
+                ("model.t5_model.", "qwen_model."),
+                ("model.t5_proj.", "qwen_proj."),
+                ("t5_model.", "qwen_model."),
+                ("t5_proj.", "qwen_proj."),
+                ("model.normalize_video.", "normalize_video."),
+                ("model.visual.", "visual."),
+                ("model.bert.", "bert."),
+            )
+            for old_prefix, new_prefix in prefix_rules:
+                if key.startswith(old_prefix):
+                    return new_prefix + key[len(old_prefix):]
+            return key
+
+        renamed = 0
+        collisions = 0
+        for key, value in state_dict.items():
+            new_key = normalize_key(key)
+            renamed += int(new_key != key)
+            if new_key in normalized_state:
+                collisions += 1
+                continue
+            normalized_state[new_key] = value
+
+        if renamed or collisions:
+            show_log(
+                task_config,
+                "Normalized common checkpoint prefixes: renamed {} tensors, dropped {} collisions.".format(
+                    renamed, collisions
+                )
+            )
+        return normalized_state
+
+    @staticmethod
+    def _normalize_qwen_checkpoint_state_dict(state_dict, task_config=None):
+        has_lora_qwen_keys = any(
+            key.startswith("qwen_model.base_model.model.") for key in state_dict.keys()
         )
         target_uses_lora = bool(getattr(task_config, "lora", False)) if task_config is not None else False
 
-        if not has_lora_t5_keys and not target_uses_lora:
+        if not has_lora_qwen_keys and not target_uses_lora:
             return state_dict
 
         state_dict_cls = state_dict.__class__
@@ -162,37 +245,37 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
         merged_lora_count = 0
         dropped_lora_tensor_count = 0
 
-        attention_weight_pattern = re.compile(r"(\.(?:q|k|v|o))\.(weight|bias)$")
+        attention_weight_pattern = re.compile(r"(\.(?:q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj))\.(weight|bias)$")
 
         def base_to_peft_key(key):
-            if not key.startswith("t5_model."):
+            if not key.startswith("qwen_model."):
                 return key
 
-            suffix = key[len("t5_model."):]
-            new_key = "t5_model.base_model.model." + suffix
+            suffix = key[len("qwen_model."):]
+            new_key = "qwen_model.base_model.model." + suffix
             return attention_weight_pattern.sub(r"\1.base_layer.\2", new_key)
 
-        if has_lora_t5_keys and not target_uses_lora:
+        if has_lora_qwen_keys and not target_uses_lora:
             lora_a_tensors = {}
             lora_b_tensors = {}
 
             for key, value in state_dict.items():
                 new_key = key
-                if key.startswith("t5_model.base_model.model."):
-                    new_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
+                if key.startswith("qwen_model.base_model.model."):
+                    new_key = key.replace("qwen_model.base_model.model.", "qwen_model.", 1)
                     if ".base_layer." in new_key:
                         new_key = new_key.replace(".base_layer.", ".")
                     converted_key_count += int(new_key != key)
 
                 if ".lora_A." in key:
-                    base_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
+                    base_key = key.replace("qwen_model.base_model.model.", "qwen_model.", 1)
                     base_key = base_key.split(".lora_A.", 1)[0] + ".weight"
                     lora_a_tensors[base_key] = value
                     dropped_lora_tensor_count += 1
                     continue
 
                 if ".lora_B." in key:
-                    base_key = key.replace("t5_model.base_model.model.", "t5_model.", 1)
+                    base_key = key.replace("qwen_model.base_model.model.", "qwen_model.", 1)
                     base_key = base_key.split(".lora_B.", 1)[0] + ".weight"
                     lora_b_tensors[base_key] = value
                     dropped_lora_tensor_count += 1
@@ -221,13 +304,13 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
             show_log(
                 task_config,
-                "Normalized LoRA T5 checkpoint for non-LoRA load: converted {} keys, merged {} LoRA updates, dropped {} adapter tensors.".format(
+                "Normalized LoRA Qwen checkpoint for non-LoRA load: converted {} keys, merged {} LoRA updates, dropped {} adapter tensors.".format(
                     converted_key_count, merged_lora_count, dropped_lora_tensor_count
                 ),
             )
             return normalized_state
 
-        if target_uses_lora and not has_lora_t5_keys:
+        if target_uses_lora and not has_lora_qwen_keys:
             for key, value in state_dict.items():
                 new_key = base_to_peft_key(key)
                 converted_key_count += int(new_key != key)
@@ -235,19 +318,19 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
 
             show_log(
                 task_config,
-                "Normalized non-LoRA T5 checkpoint for LoRA load: converted {} keys.".format(
+                "Normalized non-LoRA Qwen checkpoint for LoRA load: converted {} keys.".format(
                     converted_key_count
                 ),
             )
             return normalized_state
 
-        if has_lora_t5_keys and target_uses_lora:
+        if has_lora_qwen_keys and target_uses_lora:
             # Both checkpoint and new model use LoRA, but possibly with different
             # target_modules (e.g. ckpt=['q','k','v','o'], model=['q','v']).
             # Detect which modules had LoRA in the checkpoint.
             ckpt_lora_modules = set()
             for key in state_dict.keys():
-                if '.lora_A.' in key and key.startswith('t5_model.base_model.model.'):
+                if '.lora_A.' in key and key.startswith('qwen_model.base_model.model.'):
                     module_name = key.split('.lora_A.')[0].split('.')[-1]
                     ckpt_lora_modules.add(module_name)
 
@@ -255,6 +338,16 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
                 getattr(task_config, 'lora_target_modules', ['q', 'v'])
                 if task_config is not None else ['q', 'v']
             )
+            qwen_lora_aliases = {
+                "q": "q_proj",
+                "k": "k_proj",
+                "v": "v_proj",
+                "o": "o_proj",
+                "gate": "gate_proj",
+                "up": "up_proj",
+                "down": "down_proj",
+            }
+            new_target_modules = {qwen_lora_aliases.get(module, module) for module in new_target_modules}
             excess_modules = ckpt_lora_modules - new_target_modules
 
             if not excess_modules:
@@ -352,6 +445,19 @@ def check_attr(target_name, task_config):
     return hasattr(task_config, target_name) and task_config.__dict__[target_name]
 
 class UniVL(UniVLPreTrainedModel):
+    @staticmethod
+    def _resolve_qwen_lora_targets(target_modules):
+        mapping = {
+            "q": "q_proj",
+            "k": "k_proj",
+            "v": "v_proj",
+            "o": "o_proj",
+            "gate": "gate_proj",
+            "up": "up_proj",
+            "down": "down_proj",
+        }
+        return [mapping.get(name, name) for name in target_modules]
+
     def __init__(self, bert_config, visual_config, cross_config, decoder_config, task_config):
         super(UniVL, self).__init__(bert_config, visual_config, cross_config, decoder_config)
         self.task_config = task_config
@@ -446,14 +552,19 @@ class UniVL(UniVLPreTrainedModel):
                 self.max_txt_len = getattr(self.task_config, "max_txt_len", 32)
                 self.prompt = " A video of"
 
-                t5_model_name = getattr(self.task_config, "t5_model", "google/flan-t5-xl")
-                self.t5_tokenizer = T5TokenizerFast.from_pretrained(t5_model_name)
-                t5_config = T5Config.from_pretrained(t5_model_name)
-                t5_config.dense_act_fn = "gelu"
-                self.t5_model = T5ForConditionalGeneration.from_pretrained(
-                    t5_model_name, config=t5_config,
+                qwen_model_name = getattr(self.task_config, "qwen_model", "Qwen/Qwen3-4B")
+                self.qwen_tokenizer = AutoTokenizer.from_pretrained(qwen_model_name, use_fast=False, trust_remote_code=True)
+                if self.qwen_tokenizer.pad_token_id is None:
+                    self.qwen_tokenizer.pad_token = self.qwen_tokenizer.eos_token
+                self.t5_tokenizer = self.qwen_tokenizer
+
+                self.qwen_model = AutoModelForCausalLM.from_pretrained(
+                    qwen_model_name,
+                    torch_dtype=torch.bfloat16,
+                    trust_remote_code=True,
                 )
-                for name, param in self.t5_model.named_parameters():
+                qwen_hidden_size = getattr(self.qwen_model.config, "hidden_size", 2560)
+                for name, param in self.qwen_model.named_parameters():
                     param.requires_grad = False
                     param.data = param.data.bfloat16()
 
@@ -461,10 +572,11 @@ class UniVL(UniVLPreTrainedModel):
                 lora_r = getattr(self.task_config, "lora_r", 16)
                 lora_alpha = getattr(self.task_config, "lora_alpha", 32)
                 lora_dropout = getattr(self.task_config, "lora_dropout", 0.05)
-                # Read target_modules from task_config (default ['q','v'] matches reference).
+                # Read target_modules from task_config (default ['q','v'] maps to Qwen q_proj/v_proj).
                 lora_target_modules = getattr(self.task_config, 'lora_target_modules', ['q', 'v'])
+                lora_target_modules = self._resolve_qwen_lora_targets(lora_target_modules)
                 peft_config = LoraConfig(
-                    task_type=TaskType.SEQ_2_SEQ_LM,
+                    task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
                     r=lora_r,
                     lora_alpha=lora_alpha,
@@ -473,15 +585,13 @@ class UniVL(UniVLPreTrainedModel):
                 )
 
                 if lora:
-                    # Match reference (our_blip2_t5.py): do NOT pass autocast_adapter_dtype=False.
-                    # PEFT's default keeps LoRA adapter weights in float32 even though the
-                    # frozen base model is bfloat16. Float32 adapters give more precise
-                    # gradient updates and match the training regime that achieves CIDEr > 80.
-                    self.t5_model = get_peft_model(self.t5_model, peft_config)
-                    self.t5_model.print_trainable_parameters()
+                    self.qwen_model = get_peft_model(self.qwen_model, peft_config)
+                    self.qwen_model.print_trainable_parameters()
 
-                self.t5_proj = nn.Linear(
-                    self.Qformer.config.hidden_size, self.t5_model.config.hidden_size
+                if qwen_hidden_size != 2560:
+                    show_log(task_config, "Qwen hidden size is {}, expected 2560 for Qwen3-4B.".format(qwen_hidden_size))
+                self.qwen_proj = nn.Linear(
+                    self.Qformer.config.hidden_size, qwen_hidden_size
                 )
                 # <=== End of Decoder
 
@@ -512,8 +622,7 @@ class UniVL(UniVLPreTrainedModel):
         self._init_weights_except_pretrained_submodules()
 
     def _init_weights_except_pretrained_submodules(self):
-        # skip_roots = {"Qformer", "t5_model"}
-        skip_roots = {"Qformer", "t5_model", "t5_proj", "qformer_visual_proj", "query_tokens", "normalize_video"}
+        skip_roots = {"Qformer", "qwen_model", "qwen_proj", "t5_model", "t5_proj", "qformer_visual_proj", "query_tokens", "normalize_video"}
 
         def init_module(module):
             for name, child in module._modules.items():
@@ -527,7 +636,7 @@ class UniVL(UniVLPreTrainedModel):
     def forward(self, input_ids, token_type_ids, attention_mask, video, video_mask=None,
                 pairs_masked_text=None, pairs_token_labels=None, masked_video=None, video_labels_index=None,
                 input_caption_ids=None, decoder_mask=None, output_caption_ids=None,
-                t5_output_caption_ids=None, gt_refs=None):
+                qwen_output_caption_ids=None, gt_refs=None):
 
         input_ids = input_ids.view(-1, input_ids.shape[-1])
         token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1])
@@ -591,15 +700,15 @@ class UniVL(UniVLPreTrainedModel):
                         (self.task_config.do_pretrain
                          or (self.task_config.do_pretrain is False and self.task_config.task_type == "caption")):
                     if self.task_config.do_pretrain:
-                        decoder_loss = self._get_t5_caption_loss(visual_output_alm,
+                        decoder_loss = self._get_qwen_caption_loss(visual_output_alm,
                                                                  video_mask,
                                                                  output_caption_ids,
-                                                                 t5_output_caption_ids)
+                                                                 qwen_output_caption_ids)
                     elif self.task_config.task_type == "caption":
-                        decoder_loss = self._get_t5_caption_loss(visual_output,
+                        decoder_loss = self._get_qwen_caption_loss(visual_output,
                                                                  video_mask,
                                                                  output_caption_ids,
-                                                                 t5_output_caption_ids,
+                                                                 qwen_output_caption_ids,
                                                                  gt_refs=gt_refs)
                     else:
                         raise NotImplementedError
@@ -626,10 +735,10 @@ class UniVL(UniVLPreTrainedModel):
                 input_caption_ids is not None and 
                 output_caption_ids is not None and
                 self.task_config.task_type == "caption"):
-                decoder_loss = self._get_t5_caption_loss(visual_output,
+                decoder_loss = self._get_qwen_caption_loss(visual_output,
                                                          video_mask,
                                                          output_caption_ids,
-                                                         t5_output_caption_ids)
+                                                         qwen_output_caption_ids)
                 return decoder_loss, visual_output
             else:
                 return None, visual_output
@@ -708,116 +817,72 @@ class UniVL(UniVLPreTrainedModel):
 
         return cross_output, pooled_output
 
-    def _build_t5_encoder_inputs(self, visual_output, video_mask, cross_output=None):
-        """Build T5 encoder inputs from visual features via Q-Former.
-
-        Args:
-            visual_output: Visual encoder output [B, T, visual_dim]
-            video_mask:    Binary mask for valid frames [B, T]
-            cross_output:  Optional pre-computed Q-Former output [B, Q, hidden].
-                           Pass this to reuse a Q-Former forward already done in
-                           the caller (avoids a redundant second Q-Former pass).
-        """
+    def _build_qwen_context(self, visual_output, video_mask, cross_output=None):
+        """Build Qwen causal-LM prefix from Q-Former visual tokens."""
         if cross_output is None:
             cross_output, _ = self._get_cross_output(visual_output, video_mask)
-        inputs_t5 = self.t5_proj(cross_output)
-        atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long, device=inputs_t5.device)
+        visual_prefix = self.qwen_proj(cross_output)
+        visual_atts = torch.ones(visual_prefix.size()[:-1], dtype=torch.long, device=visual_prefix.device)
 
-        prompt = [self.prompt] * inputs_t5.size(0)
-        prompt_tokens = self.t5_tokenizer(
+        prompt = [self.prompt] * visual_prefix.size(0)
+        prompt_tokens = self.qwen_tokenizer(
             prompt,
             padding="longest",
             truncation=True,
             max_length=self.max_txt_len,
+            add_special_tokens=False,
             return_tensors="pt",
-        ).to(inputs_t5.device)
+        ).to(visual_prefix.device)
 
-        prompt_embeds = self.t5_model.encoder.embed_tokens(prompt_tokens.input_ids)
-        inputs_embeds = torch.cat([inputs_t5, prompt_embeds], dim=1)
-        encoder_atts = torch.cat([atts_t5, prompt_tokens.attention_mask], dim=1)
-        return inputs_embeds, encoder_atts
+        prompt_embeds = self.qwen_model.get_input_embeddings()(prompt_tokens.input_ids)
+        context_embeds = torch.cat([visual_prefix, prompt_embeds], dim=1)
+        context_atts = torch.cat([visual_atts, prompt_tokens.attention_mask], dim=1)
+        return context_embeds, context_atts
 
-    def _compute_xe_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids):
-        pad_token_id = self.t5_tokenizer.pad_token_id
-        output_tokens = output_caption_ids.clone()
-        output_tokens = output_tokens.masked_fill(output_tokens.lt(0), pad_token_id)
-        output_mask = output_tokens.ne(pad_token_id).long()
-        targets = output_tokens.masked_fill(output_tokens.eq(pad_token_id), -100)
+    def _build_qwen_caption_mask_and_labels(self, caption_ids):
+        pad_token_id = self.qwen_tokenizer.pad_token_id
+        eos_token_id = self.qwen_tokenizer.eos_token_id
+        if pad_token_id is None:
+            caption_mask = torch.ones_like(caption_ids, dtype=torch.long)
+            return caption_mask, caption_ids
 
-        outputs = self.t5_model(
+        if eos_token_id is None or pad_token_id != eos_token_id:
+            caption_mask = caption_ids.ne(pad_token_id).long()
+            caption_labels = caption_ids.masked_fill(caption_mask.eq(0), -100)
+            return caption_mask, caption_labels
+
+        eos_hits = caption_ids.eq(eos_token_id)
+        eos_seen = eos_hits.cumsum(dim=1)
+        caption_mask = eos_seen.le(1).long()
+        if caption_ids.size(1) > 0:
+            caption_mask[:, 0] = 1
+        caption_labels = caption_ids.masked_fill(caption_mask.eq(0), -100)
+        return caption_mask, caption_labels
+
+    def _compute_xe_caption_loss(self, context_embeds, context_atts, output_caption_ids):
+        pad_token_id = self.qwen_tokenizer.pad_token_id
+        caption_ids = output_caption_ids.clone()
+        caption_ids = caption_ids.masked_fill(caption_ids.lt(0), pad_token_id)
+        caption_mask, caption_labels = self._build_qwen_caption_mask_and_labels(caption_ids)
+
+        caption_embeds = self.qwen_model.get_input_embeddings()(caption_ids)
+        inputs_embeds = torch.cat([context_embeds, caption_embeds], dim=1)
+        attention_mask = torch.cat([context_atts, caption_mask], dim=1)
+        ignore_prefix = torch.full(
+            context_embeds.size()[:-1],
+            -100,
+            dtype=torch.long,
+            device=context_embeds.device,
+        )
+        labels = torch.cat([ignore_prefix, caption_labels], dim=1)
+
+        outputs = self.qwen_model(
             inputs_embeds=inputs_embeds,
-            attention_mask=encoder_atts,
-            decoder_attention_mask=output_mask,
+            attention_mask=attention_mask,
             return_dict=True,
-            labels=targets,
+            labels=labels,
         )
         return outputs.loss
-
-    # def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None):
-    #     from pycocoevalcap.cider.cider import Cider
-
-    #     with torch.no_grad():
-    #         outputs = self.t5_model.generate(
-    #             inputs_embeds=inputs_embeds,
-    #             attention_mask=encoder_atts,
-    #             do_sample=False,
-    #             top_p=0.9,
-    #             temperature=1,
-    #             num_beams=self.eval_beam_size,
-    #             max_length=self.max_txt_len,
-    #             repetition_penalty=1.2,
-    #             length_penalty=1.0,
-    #             num_return_sequences=self.scst_num_samples,
-    #             return_dict_in_generate=True,
-    #             output_scores=True,
-    #         )
-
-    #     batch_size = output_caption_ids.size(0)
-    #     generated_ids = outputs.sequences
-    #     decoder_input_ids = generated_ids[:, :-1]
-    #     labels = generated_ids[:, 1:]
-    #     pad_token_id = self.t5_tokenizer.pad_token_id
-    #     labels_mask = labels.ne(pad_token_id)
-
-    #     repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
-    #     repeated_encoder_atts = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
-    #     score_outputs = self.t5_model(
-    #         inputs_embeds=repeated_inputs_embeds,
-    #         attention_mask=repeated_encoder_atts,
-    #         decoder_input_ids=decoder_input_ids,
-    #         return_dict=True,
-    #     )
-    #     token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)
-    #     selected_log_probs = token_log_probs.gather(
-    #         dim=-1,
-    #         index=labels.unsqueeze(-1),
-    #     ).squeeze(-1)
-    #     selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
-    #     output_length = labels_mask.sum(dim=1).clamp(min=1)
-    #     sequences_scores = selected_log_probs.sum(dim=1) / output_length
-    #     sequences_scores = sequences_scores.view(batch_size, self.scst_num_samples)
-
-    #     caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-    #     caps_gen = [text.strip() for text in caps_gen]
-
-    #     # Use T5-tokenized GT IDs if available (correct vocab), otherwise
-    #     # fall back to output_caption_ids (BERT vocab — legacy/incorrect)
-    #     if t5_output_caption_ids is not None:
-    #         gt_ids = t5_output_caption_ids
-    #     else:
-    #         gt_ids = output_caption_ids
-    #     gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
-    #     caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
-    #     caps_gt = list(itertools.chain(*([c] * self.scst_num_samples for c in caps_gt)))
-    #     caps_gt = [[c] for c in caps_gt]
-
-    #     caps_gen, caps_gt = tokenize(caps_gt, caps_gen)
-    #     reward = Cider().compute_score(caps_gt, caps_gen)[1].astype(np.float32)
-    #     reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
-    #     reward_baseline = torch.mean(reward, -1, keepdim=True)
-
-    #     loss = -(sequences_scores) * (reward - reward_baseline).detach()
-    #     return loss.mean()
 
     def _compute_diversity_loss(self, cross_output):
         """Penalise high cosine similarity between different Q-Former query tokens.
@@ -840,24 +905,21 @@ class UniVL(UniVLPreTrainedModel):
         diversity_loss = (F.relu(sim) * off_diag).sum() / (off_diag.sum() * sim.size(0))
         return diversity_loss.to(cross_output.dtype)
 
-    def _get_t5_caption_loss(self, visual_output, video_mask, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
+    def _get_qwen_caption_loss(self, visual_output, video_mask, output_caption_ids, qwen_output_caption_ids=None, gt_refs=None):
         if output_caption_ids is None:
             return torch.tensor(0.0, device=visual_output.device)
-        if t5_output_caption_ids is None:
+        if qwen_output_caption_ids is None:
             raise ValueError(
-                "t5_output_caption_ids is required for T5 caption loss. "
-                "output_caption_ids uses the BERT vocab and must not be used as T5 labels."
+                "qwen_output_caption_ids is required for Qwen caption loss. "
+                "output_caption_ids uses the BERT vocab and must not be used as Qwen labels."
             )
 
         output_caption_ids = output_caption_ids.view(-1, output_caption_ids.shape[-1])
-        t5_output_caption_ids = t5_output_caption_ids.view(-1, t5_output_caption_ids.shape[-1])
+        qwen_output_caption_ids = qwen_output_caption_ids.view(-1, qwen_output_caption_ids.shape[-1])
 
         with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            # ── Run Q-Former once; reuse cross_output for both diversity loss
-            # and T5 encoder input construction (avoids a redundant forward pass).
             cross_output, _ = self._get_cross_output(visual_output, video_mask)
 
-            # Diversity regularization: only during training, weight configurable
             diversity_weight = getattr(self.task_config, "qformer_diversity_weight", 0.0)
             diversity_loss = (
                 self._compute_diversity_loss(cross_output)
@@ -865,19 +927,19 @@ class UniVL(UniVLPreTrainedModel):
                 else 0.0
             )
 
-            inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
+            context_embeds, context_atts = self._build_qwen_context(
                 visual_output, video_mask, cross_output=cross_output
             )
             if self.training and getattr(self, "scst", False):
                 alpha = getattr(self.task_config, "scst_alpha", 1.0)
-                scst_loss = self._compute_scst_caption_loss(inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids, gt_refs=gt_refs)
+                scst_loss = self._compute_scst_caption_loss(context_embeds, context_atts, output_caption_ids, qwen_output_caption_ids, gt_refs=gt_refs)
                 if alpha < 1.0:
-                    xe_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+                    xe_loss = self._compute_xe_caption_loss(context_embeds, context_atts, qwen_output_caption_ids)
                     caption_loss = alpha * scst_loss + (1 - alpha) * xe_loss
                 else:
                     caption_loss = scst_loss
             else:
-                caption_loss = self._compute_xe_caption_loss(inputs_embeds, encoder_atts, t5_output_caption_ids)
+                caption_loss = self._compute_xe_caption_loss(context_embeds, context_atts, qwen_output_caption_ids)
 
             return caption_loss + diversity_weight * diversity_loss
 
@@ -904,95 +966,83 @@ class UniVL(UniVLPreTrainedModel):
             self._cider_scorer = Cider()
         return self._cider_scorer
 
-    def _compute_scst_caption_loss(self, inputs_embeds, encoder_atts, output_caption_ids, t5_output_caption_ids=None, gt_refs=None):
-        """SCST loss: generate candidates under no_grad, then re-score with a
-        differentiable teacher-forced forward pass to get valid gradients.
+    def _compute_scst_caption_loss(self, context_embeds, context_atts, output_caption_ids, qwen_output_caption_ids=None, gt_refs=None):
+        """SCST loss for Qwen causal LM prefix captioning."""
+        batch_size = context_embeds.size(0)
+        pad_token_id = self.qwen_tokenizer.pad_token_id
 
-        Key design choices:
-        1. generate() runs under torch.no_grad() — generate() is NOT differentiable;
-           wrapping it in no_grad is mandatory to avoid the "does not require grad" error.
-        2. Re-score generated sequences with a standard T5 forward pass (teacher-forcing)
-           to obtain per-token log-probs that DO have a grad_fn connected to LoRA/t5_proj.
-        3. Sequence score = mean of per-token log-probs over non-pad tokens.
-        4. Mean-beam reward baseline; advantage is detached from the gradient graph.
-        """
-        batch_size = inputs_embeds.size(0)
-        pad_token_id = self.t5_tokenizer.pad_token_id
-
-        # ── 1. Generate candidate sequences (no gradient needed here) ──
         with torch.no_grad():
-            outputs = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
+            outputs = self.qwen_model.generate(
+                inputs_embeds=context_embeds,
+                attention_mask=context_atts,
                 do_sample=False,
                 num_beams=self.scst_num_samples,
-                max_length=self.max_txt_len,
+                max_new_tokens=self.max_txt_len,
                 repetition_penalty=1.0,
                 length_penalty=1.0,
                 num_return_sequences=self.scst_num_samples,
                 return_dict_in_generate=True,
                 output_scores=False,
+                pad_token_id=self.qwen_tokenizer.pad_token_id,
+                eos_token_id=self.qwen_tokenizer.eos_token_id,
             )
-            generated_ids = outputs.sequences  # (B * scst_num_samples, seq_len)
+            generated_ids = outputs.sequences
 
-        # ── 2. Re-score with a differentiable teacher-forced forward pass ──
-        # generated_ids[:, 0] is the decoder start token (pad); shift so that
-        # decoder_input_ids = all but last token, labels = all but first token.
-        decoder_input_ids = generated_ids[:, :-1]          # (B*K, L-1)
-        labels            = generated_ids[:, 1:]            # (B*K, L-1)
-        labels_mask       = labels.ne(pad_token_id)         # True for real tokens
+        if generated_ids.size(1) <= 1:
+            return torch.tensor(0.0, device=context_embeds.device)
 
-        # Repeat visual encoder inputs to match beam expansion
-        repeated_inputs_embeds = inputs_embeds.repeat_interleave(self.scst_num_samples, dim=0)
-        repeated_encoder_atts  = encoder_atts.repeat_interleave(self.scst_num_samples, dim=0)
+        decoder_input_ids = generated_ids[:, :-1]
+        labels = generated_ids[:, 1:]
+        _, labels_for_score = self._build_qwen_caption_mask_and_labels(labels)
+        labels_mask = labels_for_score.ne(-100)
 
-        score_outputs = self.t5_model(
-            inputs_embeds=repeated_inputs_embeds,
-            attention_mask=repeated_encoder_atts,
-            decoder_input_ids=decoder_input_ids,
+        repeated_context_embeds = context_embeds.repeat_interleave(self.scst_num_samples, dim=0)
+        repeated_context_atts = context_atts.repeat_interleave(self.scst_num_samples, dim=0)
+        caption_embeds = self.qwen_model.get_input_embeddings()(decoder_input_ids)
+        inputs_embeds = torch.cat([repeated_context_embeds, caption_embeds], dim=1)
+        caption_mask, _ = self._build_qwen_caption_mask_and_labels(decoder_input_ids)
+        attention_mask = torch.cat([repeated_context_atts, caption_mask], dim=1)
+
+        score_outputs = self.qwen_model(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
             return_dict=True,
         )
-        # score_outputs.logits: (B*K, L-1, vocab_size)
-        token_log_probs = F.log_softmax(score_outputs.logits, dim=-1)
+        token_log_probs = F.log_softmax(score_outputs.logits[:, -labels.size(1):], dim=-1)
         selected_log_probs = token_log_probs.gather(
             dim=-1,
             index=labels.unsqueeze(-1),
-        ).squeeze(-1)                                        # (B*K, L-1)
+        ).squeeze(-1)
 
         selected_log_probs = selected_log_probs.masked_fill(~labels_mask, 0.0)
-        output_length = labels_mask.sum(dim=1).clamp(min=1) # (B*K,)
-        sequences_scores = selected_log_probs.sum(dim=1) / output_length.float()  # (B*K,)
+        output_length = labels_mask.sum(dim=1).clamp(min=1)
+        sequences_scores = selected_log_probs.sum(dim=1) / output_length.float()
         sequences_scores = sequences_scores.view(batch_size, self.scst_num_samples)
 
-        # ── 3. CIDEr reward (no grad needed) ──
         with torch.no_grad():
-            caps_gen = self.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+            caps_gen = self.qwen_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             caps_gen = [t.strip() for t in caps_gen]
 
-            # Build GT references for CIDEr computation
             if gt_refs is not None and len(gt_refs) == batch_size:
                 caps_gt_repeated = []
                 for sample_refs in gt_refs:
                     for _ in range(self.scst_num_samples):
                         caps_gt_repeated.append(sample_refs)
             else:
-                gt_ids = t5_output_caption_ids if t5_output_caption_ids is not None else output_caption_ids
+                gt_ids = qwen_output_caption_ids if qwen_output_caption_ids is not None else output_caption_ids
                 gt_tokens = gt_ids.clone().masked_fill(gt_ids.lt(0), pad_token_id)
-                caps_gt = self.t5_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
+                caps_gt = self.qwen_tokenizer.batch_decode(gt_tokens, skip_special_tokens=True)
                 caps_gt_repeated = [[c] for c in itertools.chain.from_iterable(
                     [c] * self.scst_num_samples for c in caps_gt
                 )]
 
             caps_gt_tok, caps_gen_tok = tokenize(caps_gt_repeated, caps_gen)
             reward = self._get_cider_scorer().compute_score(caps_gt_tok, caps_gen_tok)[1].astype(np.float32)
-            reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
+            reward = torch.from_numpy(reward).to(context_embeds.device).view(batch_size, self.scst_num_samples)
 
-            # ── 4. Mean-beam baseline ──
             reward_baseline = torch.mean(reward, dim=-1, keepdim=True)
-            advantage = reward - reward_baseline  # (B, K)
+            advantage = reward - reward_baseline
 
-        # ── 5. SCST policy-gradient loss ──
-        # sequences_scores HAS grad_fn (from step 2); advantage is detached.
         loss = -(sequences_scores) * advantage.detach()
         return loss.mean()
 
@@ -1003,17 +1053,19 @@ class UniVL(UniVLPreTrainedModel):
             max_length = getattr(self, "max_txt_len", 32)
 
         with torch.amp.autocast(device_type="cuda",dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
+            context_embeds, context_atts = self._build_qwen_context(
                 visual_output, video_mask
             )
-            outputs = self.t5_model.generate(
-                inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
+            outputs = self.qwen_model.generate(
+                inputs_embeds=context_embeds,
+                attention_mask=context_atts,
                 do_sample=False,
                 num_beams=num_beams,
-                max_length=max_length,
+                max_new_tokens=max_length,
                 repetition_penalty=1.2,
                 length_penalty=1.0,
+                pad_token_id=self.qwen_tokenizer.pad_token_id,
+                eos_token_id=self.qwen_tokenizer.eos_token_id,
             )
 
         return outputs
@@ -1022,7 +1074,7 @@ class UniVL(UniVLPreTrainedModel):
         output_ids = self.generate_caption_ids(
             visual_output, video_mask, num_beams=num_beams, max_length=max_length
         )
-        captions = self.t5_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+        captions = self.qwen_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
         return [caption.strip() for caption in captions]
 
     def _mean_pooling_for_similarity(self, sequence_output, visual_output, attention_mask, video_mask,):
@@ -1093,25 +1145,26 @@ class UniVL(UniVLPreTrainedModel):
             decoder_mask = decoder_mask.view(-1, decoder_mask.shape[-1])
 
         with torch.amp.autocast(device_type="cuda",dtype=torch.bfloat16, enabled=torch.cuda.is_available()):
-            inputs_embeds, encoder_atts = self._build_t5_encoder_inputs(
+            context_embeds, context_atts = self._build_qwen_context(
                 visual_output, video_mask
             )
 
-            pad_token_id = self.t5_tokenizer.pad_token_id
+            pad_token_id = self.qwen_tokenizer.pad_token_id
             decoder_input_ids = input_caption_ids.clone().masked_fill(input_caption_ids.lt(0), pad_token_id)
             if decoder_mask is not None:
                 decoder_att_mask = decoder_mask.long()
             else:
                 decoder_att_mask = decoder_input_ids.ne(pad_token_id).long()
 
-            outputs = self.t5_model(
+            decoder_embeds = self.qwen_model.get_input_embeddings()(decoder_input_ids)
+            inputs_embeds = torch.cat([context_embeds, decoder_embeds], dim=1)
+            attention_mask = torch.cat([context_atts, decoder_att_mask], dim=1)
+            outputs = self.qwen_model(
                 inputs_embeds=inputs_embeds,
-                attention_mask=encoder_atts,
-                decoder_input_ids=decoder_input_ids,
-                decoder_attention_mask=decoder_att_mask,
+                attention_mask=attention_mask,
                 return_dict=True,
             )
-            decoder_scores = outputs.logits
+            decoder_scores = outputs.logits[:, -decoder_input_ids.size(1):]
 
         return decoder_scores
 

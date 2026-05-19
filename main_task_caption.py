@@ -83,8 +83,8 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument("--local_rank", default=None, type=int, help="distribted training")
     parser.add_argument('--coef_lr', type=float, default=0.1, help='coefficient for bert branch.')
     parser.add_argument('--lr_qformer', type=float, default=5e-5, help='Learning rate for QFormer parameters.')
-    parser.add_argument('--lr_lora', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
-                        help='Learning rate for T5 LoRA/decoder parameters.')
+    parser.add_argument('--lr_lora', '--lr_qwen_decoder', '--lr_t5_decoder', dest='lr_lora', type=float, default=1e-5,
+                        help='Learning rate for Qwen LoRA/decoder parameters.')
     parser.add_argument('--use_mil', action='store_true', help="Whether use MIL as Miech et. al. (2020).")
     parser.add_argument('--sampled_use_mil', action='store_true', help="Whether use MIL, has a high priority than use_mil.")
 
@@ -103,8 +103,8 @@ def get_args(description='UniVL on Caption Task'):
                         help="Number of beam candidates per video for SCST training.")
     parser.add_argument('--beam_size', type=int, default=None,
                         help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
-    parser.add_argument('--t5_model', type=str, default='google/flan-t5-xl', help="T5 model name.")
-    parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum text length for T5 tokenizer.")
+    parser.add_argument('--qwen_model', type=str, default='Qwen/Qwen3-4B', help="Qwen causal language model name.")
+    parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum caption token length for Qwen tokenizer.")
     parser.add_argument('--num_query_token', type=int, default=32, help="Number of Qformer query tokens.")
     parser.add_argument('--qformer_vision_width', type=int, default=768,
                         help="Encoder feature width expected by QFormer cross-attention.")
@@ -120,13 +120,12 @@ def get_args(description='UniVL on Caption Task'):
                         help="Weight for Q-Former query token diversity regularization loss "
                              "(0.0 to disable). Penalises high cosine similarity between different "
                              "query tokens to encourage specialization. Default: 0.0")
-    parser.add_argument('--lora', action='store_true', help="Enable LoRA for T5.")
+    parser.add_argument('--lora', action='store_true', help="Enable LoRA for Qwen.")
     parser.add_argument('--lora_r', type=int, default=16, help="LoRA rank.")
     parser.add_argument('--lora_alpha', type=int, default=32, help="LoRA alpha.")
     parser.add_argument('--lora_dropout', type=float, default=0.05, help="LoRA dropout.")
     parser.add_argument('--lora_target_modules', type=str, default='q,v',
-                        help="Comma-separated LoRA target module names (default: 'q,v'). "
-                             "Use 'q,k,v,o' to match the old 4-module config.")
+                        help="Comma-separated LoRA target module names (default: 'q,v'); q/v map to q_proj/v_proj.")
 
     parser.add_argument('--stage_two', action='store_true', help="Whether training with decoder.")
     args = parser.parse_args()
@@ -163,8 +162,8 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
     model = init_model(args, device, n_gpu, args.local_rank)
 
-    # Get T5 tokenizer from model for dataloader T5 tokenization (used by SCST)
-    t5_tokenizer = getattr(model, 't5_tokenizer', None)
+    # Get Qwen tokenizer from model for decoder-label tokenization.
+    t5_tokenizer = getattr(model, 'qwen_tokenizer', getattr(model, 't5_tokenizer', None))
 
     assert args.task_type == "caption"
     

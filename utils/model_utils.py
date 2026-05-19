@@ -5,9 +5,19 @@ from modules.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
 from modules.modeling import UniVL
 
 
+def _load_checkpoint_state_dict(model_file):
+    checkpoint = torch.load(model_file, map_location='cpu')
+    if isinstance(checkpoint, dict):
+        for key in ("state_dict", "model_state_dict", "model"):
+            nested = checkpoint.get(key)
+            if isinstance(nested, dict):
+                return nested
+    return checkpoint
+
+
 def init_model(args, device, n_gpu, local_rank):
     if args.init_model:
-        model_state_dict = torch.load(args.init_model, map_location='cpu')
+        model_state_dict = _load_checkpoint_state_dict(args.init_model)
     else:
         model_state_dict = None
 
@@ -33,7 +43,7 @@ def load_model(epoch, args, n_gpu, device, logger, model_file=None):
     if model_file is None or len(model_file) == 0:
         model_file = os.path.join(args.output_dir, "pytorch_model.bin.{}".format(epoch))
     if os.path.exists(model_file):
-        model_state_dict = torch.load(model_file, map_location='cpu')
+        model_state_dict = _load_checkpoint_state_dict(model_file)
         if args.local_rank == 0:
             logger.info("Model loaded from %s", model_file)
         cache_dir = args.cache_dir if args.cache_dir else os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed')

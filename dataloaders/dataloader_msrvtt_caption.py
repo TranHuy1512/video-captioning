@@ -124,7 +124,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
         pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.int64)
         pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.int64)
 
-        # T5-tokenized ground truth for SCST training
+        # Decoder-tokenized ground truth for caption loss / SCST training.
         t5_max_len = self.max_txt_len if self.t5_tokenizer is not None else self.max_words
         pairs_t5_output_caption_ids = np.zeros((k, t5_max_len), dtype=np.int64)
 
@@ -214,17 +214,24 @@ class MSRVTT_Caption_DataLoader(Dataset):
             pairs_output_caption_ids[i] = np.array(output_caption_ids)
             pairs_decoder_mask[i] = np.array(decoder_mask)
 
-            # T5-tokenize the raw caption text for SCST ground truth
+            # Tokenize raw caption text with the active decoder tokenizer.
             if self.t5_tokenizer is not None:
                 raw_caption = caption if caption is not None else ""
-                t5_tokens = self.t5_tokenizer(
+                token_ids = self.t5_tokenizer.encode(
                     raw_caption,
-                    padding="max_length",
+                    add_special_tokens=False,
                     truncation=True,
-                    max_length=t5_max_len,
-                    return_tensors="np",
+                    max_length=max(1, t5_max_len - 1),
                 )
-                pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
+                eos_token_id = getattr(self.t5_tokenizer, "eos_token_id", None)
+                if eos_token_id is not None:
+                    token_ids.append(eos_token_id)
+                pad_id = self.t5_tokenizer.pad_token_id or 0
+                if len(token_ids) < t5_max_len:
+                    token_ids.extend([pad_id] * (t5_max_len - len(token_ids)))
+                else:
+                    token_ids = token_ids[:t5_max_len]
+                pairs_t5_output_caption_ids[i] = np.array(token_ids, dtype=np.int64)
 
         return pairs_text, pairs_mask, pairs_segment, pairs_masked_text, pairs_token_labels, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, choice_video_ids, \

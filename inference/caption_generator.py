@@ -37,7 +37,7 @@ def eval_epoch(
         input_ids, input_mask, segment_ids, video, video_mask, \
         pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
         pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-        pairs_t5_output_caption_ids = batch
+        pairs_qwen_output_caption_ids = batch
 
         with torch.no_grad():
             # Calculate validation loss
@@ -48,7 +48,7 @@ def eval_epoch(
                         masked_video=masked_video, video_labels_index=video_labels_index,
                         input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
                         output_caption_ids=pairs_output_caption_ids,
-                        t5_output_caption_ids=pairs_t5_output_caption_ids)
+                        qwen_output_caption_ids=pairs_qwen_output_caption_ids)
             if loss is not None:
                 if n_gpu > 1:
                     loss = loss.mean()
@@ -61,7 +61,8 @@ def eval_epoch(
             generated_ids = model.generate_caption_ids(
                 visual_output, video_mask, num_beams=eval_beam_size, max_length=max_length
             )
-            all_result_lists.extend(model.t5_tokenizer.batch_decode(generated_ids, skip_special_tokens=True))
+            decoder_tokenizer = getattr(model, "qwen_tokenizer", getattr(model, "t5_tokenizer", None))
+            all_result_lists.extend(decoder_tokenizer.batch_decode(generated_ids, skip_special_tokens=True))
 
             pairs_output_caption_ids = pairs_output_caption_ids.view(-1, pairs_output_caption_ids.shape[-1])
             caption_list = pairs_output_caption_ids.cpu().detach().numpy()
