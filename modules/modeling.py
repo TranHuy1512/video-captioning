@@ -250,8 +250,8 @@ class UniVLPreTrainedModel(PreTrainedModel, nn.Module):
                     ckpt_lora_modules.add(module_name)
 
             new_target_modules = set(
-                getattr(task_config, 'lora_target_modules', ['q', 'v'])
-                if task_config is not None else ['q', 'v']
+                getattr(task_config, 'lora_target_modules', ['qkv_proj', 'o_proj'])
+                if task_config is not None else ['qkv_proj', 'o_proj']
             )
             excess_modules = ckpt_lora_modules - new_target_modules
 
@@ -463,7 +463,7 @@ class UniVL(UniVLPreTrainedModel):
                 lora_r = getattr(self.task_config, "lora_r", 16)
                 lora_alpha = getattr(self.task_config, "lora_alpha", 32)
                 lora_dropout = getattr(self.task_config, "lora_dropout", 0.05)
-                lora_target_modules = getattr(self.task_config, 'lora_target_modules', ['q_proj', 'v_proj'])
+                lora_target_modules = getattr(self.task_config, 'lora_target_modules', ['qkv_proj', 'o_proj'])
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
