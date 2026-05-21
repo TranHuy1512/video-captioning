@@ -32,11 +32,13 @@ def save_predictions(
     pred_path = os.path.join(output_dir, pred_filename)
     with open(pred_path, "w", encoding='utf-8') as writer:
         for pred_txt in predictions:
+            pred_txt = " ".join(str(pred_txt).split())
             writer.write(pred_txt + "\n")
     
     ref_path = os.path.join(output_dir, ref_filename)
     with open(ref_path, "w", encoding='utf-8') as writer:
         for ref_txt in references:
+            ref_txt = " ".join(str(ref_txt).split())
             writer.write(ref_txt + "\n")
     
     return pred_path, ref_path
@@ -59,6 +61,7 @@ def save_complete_results(
         for idx, pred_txt in enumerate(predictions):
             video_id, sub_id = dataset.iter2video_pairs_dict[idx]
             start_time = dataset.data_dict[video_id]['start'][sub_id]
+            pred_txt = " ".join(str(pred_txt).split())
             writer.write("{}\t{}\t{}\n".format(video_id, start_time, pred_txt))
     
     return output_path

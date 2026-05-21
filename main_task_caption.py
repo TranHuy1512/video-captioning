@@ -7,6 +7,8 @@ import torch
 import os
 import argparse
 
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 from metrics import CaptionEvaluator, PYCOCOEVALCAP_AVAILABLE
 from modules.tokenization import BertTokenizer
 
@@ -104,6 +106,10 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--beam_size', type=int, default=None,
                         help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
     parser.add_argument('--llm_model', type=str, default='microsoft/Phi-4-mini-instruct', help="Causal LLM decoder model name.")
+    parser.add_argument('--decoder_prompt', type=str, default='Describe this video in one short sentence.',
+                        help="Text prompt placed after the visual prefix for the causal decoder.")
+    parser.add_argument('--use_decoder_chat_template', action='store_true',
+                        help="Wrap decoder_prompt with the tokenizer chat template before Phi generation/training.")
     parser.add_argument('--max_txt_len', type=int, default=32, help="Maximum caption generation/training token length.")
     parser.add_argument('--num_query_token', type=int, default=32, help="Number of Qformer query tokens.")
     parser.add_argument('--qformer_vision_width', type=int, default=768,

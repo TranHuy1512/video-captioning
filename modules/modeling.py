@@ -442,12 +442,11 @@ class UniVL(UniVLPreTrainedModel):
                 # Backwards compatibility for older call sites/check scripts.
                 self.beam_size = self.eval_beam_size
                 self.max_txt_len = getattr(self.task_config, "max_txt_len", 32)
-                self.prompt = " A video of"
-
                 phi_model_name = getattr(self.task_config, "llm_model", "microsoft/Phi-4-mini-instruct")
                 self.phi_tokenizer = AutoTokenizer.from_pretrained(phi_model_name, trust_remote_code=True)
                 if self.phi_tokenizer.pad_token_id is None:
                     self.phi_tokenizer.pad_token = self.phi_tokenizer.eos_token
+                self.prompt = self._build_decoder_prompt()
                 phi_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
                 self.phi_model = AutoModelForCausalLM.from_pretrained(
                     phi_model_name,
@@ -704,6 +703,60 @@ class UniVL(UniVLPreTrainedModel):
 
         return cross_output, pooled_output
 
+    def _build_decoder_prompt(self):
+        prompt = getattr(
+            self.task_config,
+            "decoder_prompt",
+            "Describe this video in one short sentence.",
+        )
+        if getattr(self.task_config, "use_decoder_chat_template", False):
+            chat_template = getattr(self.phi_tokenizer, "chat_template", None)
+            if chat_template:
+                prompt = self.phi_tokenizer.apply_chat_template(
+                    [{"role": "user", "content": prompt}],
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+        return prompt
+
+    @staticmethod
+    def _clean_generated_caption(text):
+        text = text.replace("\r", "\n")
+        for marker in (
+            "<|user|>",
+            "<|assistant|>",
+            "<|system|>",
+            "<|end|>",
+            "## response",
+            "# response",
+            "[image]",
+        ):
+            marker_pos = text.lower().find(marker.lower())
+            if marker_pos >= 0:
+                text = text[:marker_pos]
+        text = text.split("\n", 1)[0]
+        text = " ".join(text.split())
+        return text.strip(" :-")
+
+    def decode_caption_ids(self, output_ids):
+        captions = self.phi_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+        return [self._clean_generated_caption(caption) for caption in captions]
+
+    def _decoder_token_mask_with_eos(self, token_ids):
+        """Treat the first pad/eos token after text as EOS, not padding.
+
+        Phi uses the same token id for pad and eos. If we simply mask
+        token_ids == pad_token_id, the model never learns to stop generation.
+        """
+        pad_token_id = self.phi_tokenizer.pad_token_id
+        token_mask = token_ids.ne(pad_token_id)
+        first_pad = token_mask.long().sum(dim=1)
+        has_room_for_eos = first_pad.lt(token_ids.size(1))
+        if has_room_for_eos.any():
+            rows = torch.arange(token_ids.size(0), device=token_ids.device)
+            token_mask[rows[has_room_for_eos], first_pad[has_room_for_eos]] = True
+        return token_mask
+
     def _build_phi_prefix_inputs(self, visual_output, video_mask, cross_output=None):
         """Build Phi prefix embeddings from visual features via Q-Former.
 
@@ -738,17 +791,17 @@ class UniVL(UniVLPreTrainedModel):
         pad_token_id = self.phi_tokenizer.pad_token_id
         output_tokens = output_caption_ids.clone()
         output_tokens = output_tokens.masked_fill(output_tokens.lt(0), pad_token_id)
-        output_mask = output_tokens.ne(pad_token_id).long()
+        output_mask = self._decoder_token_mask_with_eos(output_tokens)
         caption_embeds = self.phi_model.get_input_embeddings()(output_tokens)
         inputs_embeds = torch.cat([prefix_embeds, caption_embeds], dim=1)
-        attention_mask = torch.cat([prefix_atts, output_mask], dim=1)
+        attention_mask = torch.cat([prefix_atts, output_mask.long()], dim=1)
         prefix_labels = torch.full(
             prefix_atts.shape,
             -100,
             dtype=torch.long,
             device=prefix_atts.device,
         )
-        caption_labels = output_tokens.masked_fill(output_tokens.eq(pad_token_id), -100)
+        caption_labels = output_tokens.masked_fill(~output_mask, -100)
         labels = torch.cat([prefix_labels, caption_labels], dim=1)
 
         outputs = self.phi_model(
@@ -861,24 +914,27 @@ class UniVL(UniVLPreTrainedModel):
 
         # ── 1. Generate candidate sequences (no gradient needed here) ──
         with torch.no_grad():
-            outputs = self.phi_model.generate(
+            generate_kwargs = dict(
                 inputs_embeds=prefix_embeds,
                 attention_mask=prefix_atts,
                 do_sample=False,
                 num_beams=self.scst_num_samples,
                 max_new_tokens=self.max_txt_len,
                 repetition_penalty=1.0,
-                length_penalty=1.0,
+                no_repeat_ngram_size=3,
                 num_return_sequences=self.scst_num_samples,
                 return_dict_in_generate=True,
                 output_scores=False,
                 pad_token_id=pad_token_id,
                 eos_token_id=self.phi_tokenizer.eos_token_id,
             )
+            if self.scst_num_samples > 1:
+                generate_kwargs.update(length_penalty=1.0, early_stopping=True)
+            outputs = self.phi_model.generate(**generate_kwargs)
             generated_ids = outputs.sequences  # (B * scst_num_samples, seq_len)
 
         # ── 2. Re-score with a differentiable teacher-forced forward pass ──
-        generated_mask = generated_ids.ne(pad_token_id)
+        generated_mask = self._decoder_token_mask_with_eos(generated_ids)
         generated_embeds = self.phi_model.get_input_embeddings()(generated_ids)
 
         # Repeat visual encoder inputs to match beam expansion
@@ -919,8 +975,7 @@ class UniVL(UniVLPreTrainedModel):
 
         # ── 3. CIDEr reward (no grad needed) ──
         with torch.no_grad():
-            caps_gen = self.phi_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-            caps_gen = [t.strip() for t in caps_gen]
+            caps_gen = self.decode_caption_ids(generated_ids)
 
             # Build GT references for CIDEr computation
             if gt_refs is not None and len(gt_refs) == batch_size:
@@ -959,17 +1014,20 @@ class UniVL(UniVLPreTrainedModel):
             prefix_embeds, prefix_atts = self._build_phi_prefix_inputs(
                 visual_output, video_mask
             )
-            outputs = self.phi_model.generate(
+            generate_kwargs = dict(
                 inputs_embeds=prefix_embeds,
                 attention_mask=prefix_atts,
                 do_sample=False,
                 num_beams=num_beams,
                 max_new_tokens=max_length,
                 repetition_penalty=1.2,
-                length_penalty=1.0,
+                no_repeat_ngram_size=3,
                 pad_token_id=self.phi_tokenizer.pad_token_id,
                 eos_token_id=self.phi_tokenizer.eos_token_id,
             )
+            if num_beams > 1:
+                generate_kwargs.update(length_penalty=0.8, early_stopping=True)
+            outputs = self.phi_model.generate(**generate_kwargs)
 
         return outputs
 
@@ -977,8 +1035,7 @@ class UniVL(UniVLPreTrainedModel):
         output_ids = self.generate_caption_ids(
             visual_output, video_mask, num_beams=num_beams, max_length=max_length
         )
-        captions = self.phi_tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-        return [caption.strip() for caption in captions]
+        return self.decode_caption_ids(output_ids)
 
     def _mean_pooling_for_similarity(self, sequence_output, visual_output, attention_mask, video_mask,):
         attention_mask_un = attention_mask.to(dtype=torch.float).unsqueeze(-1)

@@ -61,7 +61,7 @@ def eval_epoch(
             generated_ids = model.generate_caption_ids(
                 visual_output, video_mask, num_beams=eval_beam_size, max_length=max_length
             )
-            all_result_lists.extend(model.phi_tokenizer.batch_decode(generated_ids, skip_special_tokens=True))
+            all_result_lists.extend(model.decode_caption_ids(generated_ids))
 
             pairs_output_caption_ids = pairs_output_caption_ids.view(-1, pairs_output_caption_ids.shape[-1])
             caption_list = pairs_output_caption_ids.cpu().detach().numpy()

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export TOKENIZERS_PARALLELISM=false
+
 # Phi-4-mini caption pipeline:
 # Visual features [B,T,768] -> UniVL visual encoder -> Q-Former [B,32,768]
 # -> phi_proj 768->3072 -> visual prefix [B,32,3072] -> Phi decoder -> caption.
@@ -50,7 +52,9 @@ torchrun --nproc_per_node=1 --standalone main_task_caption.py \
   --qformer_checkpoint Salesforce/blip2-opt-6.7b-coco \
   --qformer_diversity_weight 0.0 \
   --llm_model microsoft/Phi-4-mini-instruct \
-  --max_txt_len 32 \
+  --decoder_prompt "Describe this video in one short sentence." \
+  --use_decoder_chat_template \
+  --max_txt_len 20 \
   --eval_beam_size 5 \
   --lora \
   --lora_r 32 \
