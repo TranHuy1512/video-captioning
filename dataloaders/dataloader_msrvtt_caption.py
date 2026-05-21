@@ -26,7 +26,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
             feature_framerate=1.0,
             max_frames=100,
             split_type="",
-            t5_tokenizer=None,
+            llama_tokenizer=None,
             max_txt_len=32,
             scst=False,
             use_small_dataset=False,
@@ -44,7 +44,7 @@ class MSRVTT_Caption_DataLoader(Dataset):
         self.max_words = max_words
         self.max_frames = max_frames
         self.tokenizer = tokenizer
-        self.t5_tokenizer = t5_tokenizer
+        self.llama_tokenizer = llama_tokenizer
         self.max_txt_len = max_txt_len
 
         self.scst = scst
@@ -124,9 +124,10 @@ class MSRVTT_Caption_DataLoader(Dataset):
         pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.int64)
         pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.int64)
 
-        # T5-tokenized ground truth for SCST training
-        t5_max_len = self.max_txt_len if self.t5_tokenizer is not None else self.max_words
-        pairs_t5_output_caption_ids = np.zeros((k, t5_max_len), dtype=np.int64)
+        # Llama-tokenized ground truth for decoder training
+        llama_max_len = self.max_txt_len if self.llama_tokenizer is not None else self.max_words
+        pairs_llama_output_caption_ids = np.zeros((k, llama_max_len), dtype=np.int64)
+        pairs_llama_output_caption_mask = np.zeros((k, llama_max_len), dtype=np.int64)
 
         for i, video_id in enumerate(choice_video_ids):
             words = []
@@ -214,21 +215,23 @@ class MSRVTT_Caption_DataLoader(Dataset):
             pairs_output_caption_ids[i] = np.array(output_caption_ids)
             pairs_decoder_mask[i] = np.array(decoder_mask)
 
-            # T5-tokenize the raw caption text for SCST ground truth
-            if self.t5_tokenizer is not None:
+            if self.llama_tokenizer is not None:
                 raw_caption = caption if caption is not None else ""
-                t5_tokens = self.t5_tokenizer(
-                    raw_caption,
+                eos_token = self.llama_tokenizer.eos_token or ""
+                llama_tokens = self.llama_tokenizer(
+                    raw_caption + eos_token,
                     padding="max_length",
                     truncation=True,
-                    max_length=t5_max_len,
+                    max_length=llama_max_len,
                     return_tensors="np",
+                    add_special_tokens=False,
                 )
-                pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
+                pairs_llama_output_caption_ids[i] = llama_tokens.input_ids[0]
+                pairs_llama_output_caption_mask[i] = llama_tokens.attention_mask[0]
 
         return pairs_text, pairs_mask, pairs_segment, pairs_masked_text, pairs_token_labels, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, choice_video_ids, \
-               pairs_t5_output_caption_ids
+               pairs_llama_output_caption_ids, pairs_llama_output_caption_mask
 
     # def _get_single_text(self, video_id):
     #     rind = random.randint(0, len(self.sentences[video_id]) - 1)
@@ -297,11 +300,11 @@ class MSRVTT_Caption_DataLoader(Dataset):
         pairs_masked_text, pairs_token_labels, \
         pairs_input_caption_ids, pairs_decoder_mask, \
         pairs_output_caption_ids, choice_video_ids, \
-        pairs_t5_output_caption_ids = self._get_text(video_id, caption)
+        pairs_llama_output_caption_ids, pairs_llama_output_caption_mask = self._get_text(video_id, caption)
 
         video, video_mask, masked_video, video_labels_index = self._get_video(choice_video_ids)
 
         return pairs_text, pairs_mask, pairs_segment, video, video_mask, \
                pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-               pairs_t5_output_caption_ids, idx
+               pairs_llama_output_caption_ids, pairs_llama_output_caption_mask, idx
