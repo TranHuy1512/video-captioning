@@ -726,6 +726,15 @@ class BertModel(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
+    def get_head_mask(self, head_mask, num_hidden_layers):
+        if head_mask is None:
+            return [None] * num_hidden_layers
+        if head_mask.dim() == 1:
+            head_mask = head_mask[None, None, :, None, None].expand(num_hidden_layers, -1, -1, -1, -1)
+        elif head_mask.dim() == 2:
+            head_mask = head_mask[:, None, :, None, None]
+        return head_mask.to(dtype=self.dtype)
+
     def get_extended_attention_mask(
         self,
         attention_mask: Tensor,
@@ -985,6 +994,7 @@ class BertLMHeadModel(BertPreTrainedModel):
 
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder.bias"]
+    all_tied_weights_keys = {}
 
     def __init__(self, config):
         super().__init__(config)
