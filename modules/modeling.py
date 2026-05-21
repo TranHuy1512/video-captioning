@@ -451,7 +451,7 @@ class UniVL(UniVLPreTrainedModel):
                 phi_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
                 self.phi_model = AutoModelForCausalLM.from_pretrained(
                     phi_model_name,
-                    dtype=phi_dtype,
+                    torch_dtype=phi_dtype,
                     trust_remote_code=True,
                 )
                 if self.phi_model.config.pad_token_id is None:
