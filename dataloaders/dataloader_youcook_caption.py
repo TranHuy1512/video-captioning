@@ -9,7 +9,6 @@ import os
 import numpy as np
 import pickle
 import re
-import random
 import io
 
 class Youcook_Caption_DataLoader(Dataset):
@@ -67,8 +66,6 @@ class Youcook_Caption_DataLoader(Dataset):
         pairs_text = np.zeros((k, self.max_words), dtype=np.long)
         pairs_mask = np.zeros((k, self.max_words), dtype=np.long)
         pairs_segment = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_masked_text = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_token_labels = np.zeros((k, self.max_words), dtype=np.long)
 
         pairs_input_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
         pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
@@ -90,61 +87,20 @@ class Youcook_Caption_DataLoader(Dataset):
                 words = words[:total_length_with_CLS]
             words = words + ["[SEP]"]
 
-            # Mask Language Model <-----
-            token_labels = []
-            masked_tokens = words.copy()
-            for token_id, token in enumerate(masked_tokens):
-                if token_id == 0 or token_id == len(masked_tokens) - 1:
-                    token_labels.append(-1)
-                    continue
-                prob = random.random()
-                # mask token with 15% probability
-                if prob < 0.15:
-                    prob /= 0.15
-
-                    # 80% randomly change token to mask token
-                    if prob < 0.8:
-                        masked_tokens[token_id] = "[MASK]"
-
-                    # 10% randomly change token to random token
-                    elif prob < 0.9:
-                        masked_tokens[token_id] = random.choice(list(self.tokenizer.vocab.items()))[0]
-
-                    # -> rest 10% randomly keep current token
-
-                    # append current token to output (we will predict these later)
-                    try:
-                        token_labels.append(self.tokenizer.vocab[token])
-                    except KeyError:
-                        # For unknown words (should not occur with BPE vocab)
-                        token_labels.append(self.tokenizer.vocab["[UNK]"])
-                        # print("Cannot find token '{}' in vocab. Using [UNK] insetad".format(token))
-                else:
-                    # no masking token (will be ignored by loss function later)
-                    token_labels.append(-1)
-            # -----> Mask Language Model
-
             input_ids = self.tokenizer.convert_tokens_to_ids(words)
-            masked_token_ids = self.tokenizer.convert_tokens_to_ids(masked_tokens)
             input_mask = [1] * len(input_ids)
             segment_ids = [0] * len(input_ids)
             while len(input_ids) < self.max_words:
                 input_ids.append(0)
                 input_mask.append(0)
                 segment_ids.append(0)
-                masked_token_ids.append(0)
-                token_labels.append(-1)
             assert len(input_ids) == self.max_words
             assert len(input_mask) == self.max_words
             assert len(segment_ids) == self.max_words
-            assert len(masked_token_ids) == self.max_words
-            assert len(token_labels) == self.max_words
 
             pairs_text[i] = np.array(input_ids)
             pairs_mask[i] = np.array(input_mask)
             pairs_segment[i] = np.array(segment_ids)
-            pairs_masked_text[i] = np.array(masked_token_ids)
-            pairs_token_labels[i] = np.array(token_labels)
 
             # For generate captions
             caption_words = self.tokenizer.tokenize(data_dict['text'][ind])
@@ -181,7 +137,7 @@ class Youcook_Caption_DataLoader(Dataset):
                 )
                 pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
 
-        return pairs_text, pairs_mask, pairs_segment, pairs_masked_text, pairs_token_labels,\
+        return pairs_text, pairs_mask, pairs_segment, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
                pairs_t5_output_caption_ids
 
@@ -210,25 +166,7 @@ class Youcook_Caption_DataLoader(Dataset):
         for i, v_length in enumerate(max_video_length):
             video_mask[i][:v_length] = [1] * v_length
 
-        # Mask Frame Model <-----
-        video_labels_index = [[] for _ in range(len(s))]
-        masked_video = video.copy()
-        for i, video_pair_ in enumerate(masked_video):
-            for j, _ in enumerate(video_pair_):
-                if j < max_video_length[i]:
-                    prob = random.random()
-                    # mask token with 15% probability
-                    if prob < 0.15:
-                        masked_video[i][j] = [0.] * video.shape[-1]
-                        video_labels_index[i].append(j)
-                    else:
-                        video_labels_index[i].append(-1)
-                else:
-                    video_labels_index[i].append(-1)
-        video_labels_index = np.array(video_labels_index, dtype=np.long)
-        # -----> Mask Frame Model
-
-        return video, video_mask, masked_video, video_labels_index
+        return video, video_mask
 
     def __getitem__(self, feature_idx):
 
@@ -236,13 +174,12 @@ class Youcook_Caption_DataLoader(Dataset):
         idx = self.video_id2idx_dict[video_id]
 
         pairs_text, pairs_mask, pairs_segment, \
-        pairs_masked_text, pairs_token_labels, pairs_input_caption_ids, \
+        pairs_input_caption_ids, \
         pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
         pairs_t5_output_caption_ids = self._get_text(video_id, sub_id)
 
-        video, video_mask, masked_video, video_labels_index = self._get_video(idx, starts, ends)
+        video, video_mask = self._get_video(idx, starts, ends)
 
         return pairs_text, pairs_mask, pairs_segment, video, video_mask, \
-               pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
                pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
                pairs_t5_output_caption_ids, feature_idx

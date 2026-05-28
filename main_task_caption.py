@@ -58,7 +58,6 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument("--bert_model", default="bert-base-uncased", type=str, required=True, help="Bert pre-trained model")
     parser.add_argument("--visual_model", default="visual-base", type=str, required=False, help="Visual module")
     parser.add_argument("--cross_model", default="cross-base", type=str, required=False, help="Cross module")
-    parser.add_argument("--decoder_model", default="decoder-base", type=str, required=False, help="Decoder module")
     parser.add_argument("--init_model", default=None, type=str, required=False, help="Initial model.")
     parser.add_argument("--do_lower_case", action='store_true', help="Set this flag if you are using an uncased model.")
     parser.add_argument("--warmup_proportion", default=0.1, type=float,
@@ -91,7 +90,6 @@ def get_args(description='UniVL on Caption Task'):
     parser.add_argument('--text_num_hidden_layers', type=int, default=12, help="Layer NO. of text.")
     parser.add_argument('--visual_num_hidden_layers', type=int, default=6, help="Layer NO. of visual.")
     parser.add_argument('--cross_num_hidden_layers', type=int, default=2, help="Layer NO. of cross.")
-    parser.add_argument('--decoder_num_hidden_layers', type=int, default=3, help="Layer NO. of decoder.")
 
     parser.add_argument('--freeze_vit', action='store_true', help="Freeze vision encoder parameters.")
     parser.add_argument('--scst', action='store_true', help="Enable SCST training for caption loss.")

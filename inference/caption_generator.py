@@ -35,7 +35,6 @@ def eval_epoch(
         batch = tuple(t.to(device, non_blocking=True) for t in batch[:-1])
 
         input_ids, input_mask, segment_ids, video, video_mask, \
-        pairs_masked_text, pairs_token_labels, masked_video, video_labels_index, \
         pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
         pairs_t5_output_caption_ids = batch
 
@@ -44,8 +43,6 @@ def eval_epoch(
             # forward() returns (loss, visual_output) in eval mode,
             # so we can reuse visual_output for generation without re-encoding.
             loss, visual_output = model(input_ids, segment_ids, input_mask, video, video_mask,
-                        pairs_masked_text=pairs_masked_text, pairs_token_labels=pairs_token_labels,
-                        masked_video=masked_video, video_labels_index=video_labels_index,
                         input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
                         output_caption_ids=pairs_output_caption_ids,
                         t5_output_caption_ids=pairs_t5_output_caption_ids)
