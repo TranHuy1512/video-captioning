@@ -500,7 +500,7 @@ class UniVL(UniVLPreTrainedModel):
         init_module(self)
 
     def forward(self, input_ids, token_type_ids, attention_mask, video, video_mask=None,
-                input_caption_ids=None, decoder_mask=None, output_caption_ids=None,
+                output_caption_ids=None,
                 t5_output_caption_ids=None, gt_refs=None, **unused_legacy_kwargs):
 
         input_ids = input_ids.view(-1, input_ids.shape[-1])
@@ -508,10 +508,6 @@ class UniVL(UniVLPreTrainedModel):
         attention_mask = attention_mask.view(-1, attention_mask.shape[-1])
         video_mask = video_mask.view(-1, video_mask.shape[-1])
         video = self.normalize_video(video)
-
-        if input_caption_ids is not None:
-            input_caption_ids = input_caption_ids.view(-1, input_caption_ids.shape[-1])
-            decoder_mask = decoder_mask.view(-1, decoder_mask.shape[-1])
 
         # Skip text encoder when it's not needed (caption-only fine-tuning)
         _need_text_encoder = (
@@ -537,7 +533,7 @@ class UniVL(UniVLPreTrainedModel):
                 loss += sim_loss
 
             if self._stage_two:
-                if (input_caption_ids is not None) and \
+                if (output_caption_ids is not None) and \
                         (self.task_config.do_pretrain
                          or (self.task_config.do_pretrain is False and self.task_config.task_type == "caption")):
                     if self.task_config.do_pretrain or self.task_config.task_type == "caption":
@@ -561,7 +557,6 @@ class UniVL(UniVLPreTrainedModel):
             # During evaluation, return (loss, visual_output) so callers can
             # reuse visual_output for generation without re-encoding.
             if (self._stage_two and 
-                input_caption_ids is not None and 
                 output_caption_ids is not None and
                 self.task_config.task_type == "caption"):
                 decoder_loss = self._get_t5_caption_loss(visual_output,

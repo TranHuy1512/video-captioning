@@ -21,8 +21,7 @@ def train_epoch(epoch, args, model, train_dataloader, device, n_gpu, optimizer, 
         tensor_batch = tuple(t.to(device=device, non_blocking=True) for t in tensor_batch)
 
         input_ids, input_mask, segment_ids, video, video_mask, \
-        pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-        pairs_t5_output_caption_ids = tensor_batch
+        pairs_output_caption_ids, pairs_t5_output_caption_ids = tensor_batch
 
         # SCST single-reference: each beam is scored against the sample's
         # single GT caption (duplicated beam_size times).  Across batches/epochs
@@ -31,7 +30,6 @@ def train_epoch(epoch, args, model, train_dataloader, device, n_gpu, optimizer, 
         gt_refs = None
 
         loss = model(input_ids, segment_ids, input_mask, video, video_mask,
-                     input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
                      output_caption_ids=pairs_output_caption_ids,
                      t5_output_caption_ids=pairs_t5_output_caption_ids,
                      gt_refs=gt_refs)

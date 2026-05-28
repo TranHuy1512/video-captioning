@@ -67,9 +67,7 @@ class Youcook_Caption_DataLoader(Dataset):
         pairs_mask = np.zeros((k, self.max_words), dtype=np.long)
         pairs_segment = np.zeros((k, self.max_words), dtype=np.long)
 
-        pairs_input_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
         pairs_output_caption_ids = np.zeros((k, self.max_words), dtype=np.long)
-        pairs_decoder_mask = np.zeros((k, self.max_words), dtype=np.long)
 
         # T5-tokenized ground truth for SCST training
         t5_max_len = self.max_txt_len if self.t5_tokenizer is not None else self.max_words
@@ -106,24 +104,14 @@ class Youcook_Caption_DataLoader(Dataset):
             caption_words = self.tokenizer.tokenize(data_dict['text'][ind])
             if len(caption_words) > total_length_with_CLS:
                 caption_words = caption_words[:total_length_with_CLS]
-            input_caption_words = ["[CLS]"] + caption_words
             output_caption_words = caption_words + ["[SEP]"]
 
-            # For generate captions
-            input_caption_ids = self.tokenizer.convert_tokens_to_ids(input_caption_words)
             output_caption_ids = self.tokenizer.convert_tokens_to_ids(output_caption_words)
-            decoder_mask = [1] * len(input_caption_ids)
-            while len(input_caption_ids) < self.max_words:
-                input_caption_ids.append(0)
+            while len(output_caption_ids) < self.max_words:
                 output_caption_ids.append(0)
-                decoder_mask.append(0)
-            assert len(input_caption_ids) == self.max_words
             assert len(output_caption_ids) == self.max_words
-            assert len(decoder_mask) == self.max_words
 
-            pairs_input_caption_ids[i] = np.array(input_caption_ids)
             pairs_output_caption_ids[i] = np.array(output_caption_ids)
-            pairs_decoder_mask[i] = np.array(decoder_mask)
 
             # T5-tokenize the raw caption text for SCST ground truth
             if self.t5_tokenizer is not None:
@@ -138,7 +126,7 @@ class Youcook_Caption_DataLoader(Dataset):
                 pairs_t5_output_caption_ids[i] = t5_tokens.input_ids[0]
 
         return pairs_text, pairs_mask, pairs_segment, \
-               pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
+               pairs_output_caption_ids, starts, ends, \
                pairs_t5_output_caption_ids
 
     def _get_video(self, idx, s, e):
@@ -174,12 +162,10 @@ class Youcook_Caption_DataLoader(Dataset):
         idx = self.video_id2idx_dict[video_id]
 
         pairs_text, pairs_mask, pairs_segment, \
-        pairs_input_caption_ids, \
-        pairs_decoder_mask, pairs_output_caption_ids, starts, ends, \
+        pairs_output_caption_ids, starts, ends, \
         pairs_t5_output_caption_ids = self._get_text(video_id, sub_id)
 
         video, video_mask = self._get_video(idx, starts, ends)
 
         return pairs_text, pairs_mask, pairs_segment, video, video_mask, \
-               pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-               pairs_t5_output_caption_ids, feature_idx
+               pairs_output_caption_ids, pairs_t5_output_caption_ids, feature_idx

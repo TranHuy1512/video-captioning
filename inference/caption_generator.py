@@ -35,15 +35,13 @@ def eval_epoch(
         batch = tuple(t.to(device, non_blocking=True) for t in batch[:-1])
 
         input_ids, input_mask, segment_ids, video, video_mask, \
-        pairs_input_caption_ids, pairs_decoder_mask, pairs_output_caption_ids, \
-        pairs_t5_output_caption_ids = batch
+        pairs_output_caption_ids, pairs_t5_output_caption_ids = batch
 
         with torch.no_grad():
             # Calculate validation loss
             # forward() returns (loss, visual_output) in eval mode,
             # so we can reuse visual_output for generation without re-encoding.
             loss, visual_output = model(input_ids, segment_ids, input_mask, video, video_mask,
-                        input_caption_ids=pairs_input_caption_ids, decoder_mask=pairs_decoder_mask,
                         output_caption_ids=pairs_output_caption_ids,
                         t5_output_caption_ids=pairs_t5_output_caption_ids)
             if loss is not None:
