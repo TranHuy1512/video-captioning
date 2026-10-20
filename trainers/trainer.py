@@ -23,11 +23,21 @@ def train_epoch(epoch, args, model, train_dataloader, device, n_gpu, optimizer, 
         input_ids, input_mask, segment_ids, video, video_mask, \
         pairs_output_caption_ids, pairs_t5_output_caption_ids = tensor_batch
 
-        # SCST single-reference: each beam is scored against the sample's
-        # single GT caption (duplicated beam_size times).  Across batches/epochs
-        # the same video naturally gets different GT captions because the
-        # dataloader expands all (video, caption) pairs.
+        # Multi-reference SCST reward: score each beam against ALL ground-truth
+        # captions for that video (same set eval_epoch uses for CIDEr), not just
+        # the single caption this row happens to carry. Without this, the reward
+        # target flips to a different random-ish caption every step, which lets
+        # a generic/"safe" caption look decent on average across many steps —
+        # a plausible contributor to templated, non-specific captions. Falls
+        # back to single-reference (previous behaviour) for any dataset that
+        # doesn't expose `sentences_dict`/`video_sentences_dict` (e.g. YouCookII).
         gt_refs = None
+        if use_scst and hasattr(dataset, "sentences_dict") and hasattr(dataset, "video_sentences_dict"):
+            idx_list = sample_indices.tolist() if torch.is_tensor(sample_indices) else list(sample_indices)
+            gt_refs = [
+                dataset.video_sentences_dict[dataset.sentences_dict[idx][0]]
+                for idx in idx_list
+            ]
 
         loss = model(input_ids, segment_ids, input_mask, video, video_mask,
                      output_caption_ids=pairs_output_caption_ids,

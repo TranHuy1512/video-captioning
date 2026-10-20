@@ -40,6 +40,7 @@ from transformers import T5Config, T5ForConditionalGeneration
 
 
 from peft import LoraConfig, TaskType, get_peft_model
+from utils.diversity_utils import batch_diversity_overlap
 
 logger = logging.getLogger(__name__)
 
@@ -422,6 +423,9 @@ class UniVL(UniVLPreTrainedModel):
                 self.task_config,
                 "scst_num_samples",
                 getattr(self.task_config, "beam_size", self.eval_beam_size),
+            )
+            self.scst_diversity_weight = getattr(
+                self.task_config, "scst_diversity_weight", 0.0
             )
             # Backwards compatibility for older call sites/check scripts.
             self.beam_size = self.eval_beam_size
@@ -893,6 +897,28 @@ class UniVL(UniVLPreTrainedModel):
             caps_gt_tok, caps_gen_tok = tokenize(caps_gt_repeated, caps_gen)
             reward = self._get_cider_scorer().compute_score(caps_gt_tok, caps_gen_tok)[1].astype(np.float32)
             reward = torch.from_numpy(reward).to(inputs_embeds.device).view(batch_size, self.scst_num_samples)
+
+            # ── 3b. Batch-level diversity penalty (opt-in, default off) ──
+            # Per-sample CIDEr reward cannot see that this video's candidate
+            # caption is nearly identical to another video's candidate in the
+            # same batch (mode collapse onto a handful of generic templates
+            # such as "a man is talking"). Subtract an overlap penalty
+            # against every OTHER sample's top beam before computing the
+            # mean-beam baseline, so the advantage also reflects specificity
+            # relative to the rest of the batch, not just GT overlap.
+            if self.scst_diversity_weight > 0.0:
+                rep_tokens = [
+                    caps_gen_tok[i * self.scst_num_samples][0].split()
+                    for i in range(batch_size)
+                ]
+                penalty = np.zeros((batch_size, self.scst_num_samples), dtype=np.float32)
+                for i in range(batch_size):
+                    other_tokens_list = rep_tokens[:i] + rep_tokens[i + 1:]
+                    for k in range(self.scst_num_samples):
+                        cand_tokens = caps_gen_tok[i * self.scst_num_samples + k][0].split()
+                        penalty[i, k] = batch_diversity_overlap(cand_tokens, other_tokens_list)
+                penalty = torch.from_numpy(penalty).to(inputs_embeds.device)
+                reward = reward - self.scst_diversity_weight * penalty
 
             # ── 4. Mean-beam baseline ──
             reward_baseline = torch.mean(reward, dim=-1, keepdim=True)

@@ -1,0 +1,419 @@
+2026-05-07 11:10:38,815:INFO: Effective parameters:
+2026-05-07 11:10:38,815:INFO:   <<< batch_size: 128
+2026-05-07 11:10:38,815:INFO:   <<< batch_size_val: 128
+2026-05-07 11:10:38,815:INFO:   <<< beam_size: 5
+2026-05-07 11:10:38,815:INFO:   <<< bert_model: bert-base-uncased
+2026-05-07 11:10:38,815:INFO:   <<< cache_dir: 
+2026-05-07 11:10:38,815:INFO:   <<< coef_lr: 0.1
+2026-05-07 11:10:38,815:INFO:   <<< cross_model: cross-base
+2026-05-07 11:10:38,815:INFO:   <<< cross_num_hidden_layers: 2
+2026-05-07 11:10:38,815:INFO:   <<< data_path: data/msrvtt/MSRVTT_data.json
+2026-05-07 11:10:38,815:INFO:   <<< datatype: msrvtt
+2026-05-07 11:10:38,815:INFO:   <<< decoder_model: decoder-base
+2026-05-07 11:10:38,816:INFO:   <<< decoder_num_hidden_layers: 3
+2026-05-07 11:10:38,816:INFO:   <<< do_eval: False
+2026-05-07 11:10:38,816:INFO:   <<< do_lower_case: True
+2026-05-07 11:10:38,816:INFO:   <<< do_pretrain: False
+2026-05-07 11:10:38,816:INFO:   <<< do_train: True
+2026-05-07 11:10:38,816:INFO:   <<< epochs: 6
+2026-05-07 11:10:38,816:INFO:   <<< eval_beam_size: 5
+2026-05-07 11:10:38,816:INFO:   <<< feature_framerate: 1
+2026-05-07 11:10:38,816:INFO:   <<< features_path: /workspace/project/models/nguyhao/blip2-feature-extractor/other/default/1/msrvtt_blip2_features.pickle
+2026-05-07 11:10:38,816:INFO:   <<< fp16: False
+2026-05-07 11:10:38,816:INFO:   <<< fp16_opt_level: O1
+2026-05-07 11:10:38,816:INFO:   <<< freeze_vit: True
+2026-05-07 11:10:38,816:INFO:   <<< gradient_accumulation_steps: 2
+2026-05-07 11:10:38,816:INFO:   <<< hard_negative_rate: 0.5
+2026-05-07 11:10:38,816:INFO:   <<< init_model: /workspace/project/video-captioning/ckpts/ckpt_msrvtt_caption_1/pytorch_model.bin.best.0
+2026-05-07 11:10:38,816:INFO:   <<< local_rank: 0
+2026-05-07 11:10:38,816:INFO:   <<< lora: True
+2026-05-07 11:10:38,816:INFO:   <<< lora_alpha: 64
+2026-05-07 11:10:38,816:INFO:   <<< lora_dropout: 0.05
+2026-05-07 11:10:38,816:INFO:   <<< lora_r: 32
+2026-05-07 11:10:38,816:INFO:   <<< lora_target_modules: ['q', 'v']
+2026-05-07 11:10:38,816:INFO:   <<< lr: 2e-07
+2026-05-07 11:10:38,816:INFO:   <<< lr_decay: 0.9
+2026-05-07 11:10:38,816:INFO:   <<< lr_lora: 1e-07
+2026-05-07 11:10:38,816:INFO:   <<< lr_qformer: 1e-07
+2026-05-07 11:10:38,816:INFO:   <<< margin: 0.1
+2026-05-07 11:10:38,816:INFO:   <<< max_frames: 48
+2026-05-07 11:10:38,816:INFO:   <<< max_txt_len: 22
+2026-05-07 11:10:38,816:INFO:   <<< max_words: 48
+2026-05-07 11:10:38,816:INFO:   <<< min_time: 5.0
+2026-05-07 11:10:38,816:INFO:   <<< n_display: 50
+2026-05-07 11:10:38,816:INFO:   <<< n_gpu: 1
+2026-05-07 11:10:38,816:INFO:   <<< n_pair: 1
+2026-05-07 11:10:38,816:INFO:   <<< negative_weighting: 1
+2026-05-07 11:10:38,816:INFO:   <<< num_query_token: 32
+2026-05-07 11:10:38,816:INFO:   <<< num_thread_reader: 4
+2026-05-07 11:10:38,816:INFO:   <<< output_dir: ckpts/ckpt_msrvtt_caption
+2026-05-07 11:10:38,816:INFO:   <<< qformer_checkpoint: Salesforce/blip2-opt-6.7b-coco
+2026-05-07 11:10:38,816:INFO:   <<< qformer_checkpoint_file: 
+2026-05-07 11:10:38,816:INFO:   <<< qformer_checkpoint_local_files_only: False
+2026-05-07 11:10:38,816:INFO:   <<< qformer_diversity_weight: 0.0
+2026-05-07 11:10:38,816:INFO:   <<< qformer_vision_width: 1408
+2026-05-07 11:10:38,816:INFO:   <<< sampled_use_mil: False
+2026-05-07 11:10:38,816:INFO:   <<< scst: True
+2026-05-07 11:10:38,816:INFO:   <<< scst_alpha: 1.0
+2026-05-07 11:10:38,817:INFO:   <<< scst_num_samples: 5
+2026-05-07 11:10:38,817:INFO:   <<< seed: 42
+2026-05-07 11:10:38,817:INFO:   <<< stage_two: True
+2026-05-07 11:10:38,817:INFO:   <<< t5_model: google/flan-t5-xl
+2026-05-07 11:10:38,817:INFO:   <<< task_type: caption
+2026-05-07 11:10:38,817:INFO:   <<< text_num_hidden_layers: 12
+2026-05-07 11:10:38,817:INFO:   <<< train_csv: data/msrvtt/MSRVTT_train.9k.csv
+2026-05-07 11:10:38,817:INFO:   <<< use_mil: False
+2026-05-07 11:10:38,817:INFO:   <<< val_csv: data/msrvtt/MSRVTT_JSFUSION_test.csv
+2026-05-07 11:10:38,817:INFO:   <<< video_dim: 768
+2026-05-07 11:10:38,817:INFO:   <<< visual_model: visual-base
+2026-05-07 11:10:38,817:INFO:   <<< visual_num_hidden_layers: 6
+2026-05-07 11:10:38,817:INFO:   <<< warmup_proportion: 0.1
+2026-05-07 11:10:38,817:INFO:   <<< world_size: 1
+2026-05-07 11:10:38,817:INFO: device: cuda:0 n_gpu: 1
+2026-05-07 11:10:38,817:INFO: loading vocabulary file /workspace/project/video-captioning/modules/bert-base-uncased/vocab.txt
+2026-05-07 11:10:43,822:INFO: loading archive file /workspace/project/video-captioning/modules/bert-base-uncased
+2026-05-07 11:10:43,823:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-05-07 11:10:43,823:INFO: loading archive file /workspace/project/video-captioning/modules/visual-base
+2026-05-07 11:10:43,823:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+2026-05-07 11:10:43,823:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/visual-base/visual_pytorch_model.bin
+2026-05-07 11:10:43,823:WARNING: Set visual_config.vocab_size: 768.
+2026-05-07 11:10:43,823:INFO: loading archive file /workspace/project/video-captioning/modules/cross-base
+2026-05-07 11:10:43,823:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+2026-05-07 11:10:43,823:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/cross-base/cross_pytorch_model.bin
+2026-05-07 11:10:43,823:INFO: loading archive file /workspace/project/video-captioning/modules/decoder-base
+2026-05-07 11:10:43,823:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-05-07 11:10:43,823:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+2026-05-07 11:10:43,824:WARNING: Stage-One:False, Stage-Two:True
+2026-05-07 11:10:43,824:WARNING: Set bert_config.num_hidden_layers: 12.
+2026-05-07 11:10:45,636:WARNING: Set visual_config.num_hidden_layers: 6.
+2026-05-07 11:10:46,242:WARNING: Freeze vision encoder.
+2026-05-07 11:10:46,242:WARNING: Set cross_config.num_hidden_layers: 2.
+2026-05-07 11:10:46,396:WARNING: Add QFormer visual projection: 768 -> 1408.
+2026-05-07 11:10:48,333:INFO: QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+2026-05-07 11:10:48,907:INFO: Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+2026-05-07 11:11:07,558:WARNING: Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj., normalize_video. Skipped 40 other tensors.
+2026-05-07 11:11:26,914:INFO: --------------------
+2026-05-07 11:11:26,915:INFO: Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   similarity_dense.weight
+   similarity_dense.bias
+2026-05-07 11:11:29,291:INFO: Using pycocoevalcap for evaluation metrics
+2026-05-07 11:11:33,571:INFO: ***** Running test *****
+2026-05-07 11:11:33,571:INFO:   Num examples = 2990
+2026-05-07 11:11:33,571:INFO:   Batch size = 128
+2026-05-07 11:11:33,571:INFO:   Num steps = 24
+2026-05-07 11:11:44,227:INFO: CorpusCider: pre-computed IDF from 6513 videos, 130260 total refs, 1203418 unique n-grams
+2026-05-07 11:11:44,410:INFO: Corpus-level CIDEr scorer initialized for SCST training.
+2026-05-07 11:11:44,411:INFO: ***** Running training *****
+2026-05-07 11:11:44,411:INFO:   Num examples = 130260
+2026-05-07 11:11:44,411:INFO:   Batch size = 128
+2026-05-07 11:11:44,411:INFO:   Num steps = 6108
+2026-05-07 11:16:48,284:INFO: Epoch: 1/6, Step: 100/1017, Lr: 0.000000-0.000000, Loss: -0.001567, Time/step: 3.038655
+2026-05-07 11:21:51,419:INFO: Epoch: 1/6, Step: 200/1017, Lr: 0.000000-0.000000, Loss: -0.000975, Time/step: 3.031345
+2026-05-07 11:26:55,326:INFO: Epoch: 1/6, Step: 300/1017, Lr: 0.000000-0.000000, Loss: -0.006490, Time/step: 3.039066
+2026-05-07 11:31:59,520:INFO: Epoch: 1/6, Step: 400/1017, Lr: 0.000000-0.000000, Loss: -0.001642, Time/step: 3.041932
+2026-05-07 11:37:03,856:INFO: Epoch: 1/6, Step: 500/1017, Lr: 0.000000-0.000000, Loss: -0.003178, Time/step: 3.043356
+2026-05-07 11:42:05,324:INFO: Epoch: 1/6, Step: 600/1017, Lr: 0.000000-0.000000, Loss: -0.000760, Time/step: 3.014675
+2026-05-07 11:47:09,205:INFO: Epoch: 1/6, Step: 700/1017, Lr: 0.000000-0.000000, Loss: -0.003106, Time/step: 3.038809
+2026-05-07 11:52:13,158:INFO: Epoch: 1/6, Step: 800/1017, Lr: 0.000000-0.000000, Loss: -0.001815, Time/step: 3.039521
+2026-05-07 11:57:16,163:INFO: Epoch: 1/6, Step: 900/1017, Lr: 0.000000-0.000000, Loss: -0.000897, Time/step: 3.030043
+2026-05-07 12:02:21,037:INFO: Epoch: 1/6, Step: 1000/1017, Lr: 0.000000-0.000000, Loss: -0.002049, Time/step: 3.048740
+2026-05-07 12:03:13,914:INFO: Epoch 1/6 Finished, Train Loss: -0.002363
+2026-05-07 12:03:22,265:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-05-07 12:03:54,062:INFO:   Average Validation Loss: 2.3255
+2026-05-07 12:04:09,472:INFO: >>>  BLEU_1: 0.8484, BLEU_2: 0.7101, BLEU_3: 0.5648, BLEU_4: 0.4333
+2026-05-07 12:04:09,473:INFO: >>>  METEOR: 0.3087, ROUGE_L: 0.6371, CIDEr: 0.6090
+2026-05-07 12:04:17,430:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-05-07 12:04:17,431:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.6090, BLEU_4: 0.4333
+2026-05-07 12:08:34,150:INFO: Epoch: 2/6, Step: 84/1017, Lr: 0.000000-0.000000, Loss: -0.003097, Time/step: 2.565804
+2026-05-07 12:13:36,730:INFO: Epoch: 2/6, Step: 184/1017, Lr: 0.000000-0.000000, Loss: -0.001194, Time/step: 3.025795
+2026-05-07 12:18:41,464:INFO: Epoch: 2/6, Step: 284/1017, Lr: 0.000000-0.000000, Loss: -0.003585, Time/step: 3.047331
+2026-05-07 12:23:46,219:INFO: Epoch: 2/6, Step: 384/1017, Lr: 0.000000-0.000000, Loss: -0.003023, Time/step: 3.047548
+2026-05-07 12:28:48,832:INFO: Epoch: 2/6, Step: 484/1017, Lr: 0.000000-0.000000, Loss: -0.001492, Time/step: 3.026119
+2026-05-07 12:33:53,194:INFO: Epoch: 2/6, Step: 584/1017, Lr: 0.000000-0.000000, Loss: -0.001077, Time/step: 3.043619
+2026-05-07 12:38:55,716:INFO: Epoch: 2/6, Step: 684/1017, Lr: 0.000000-0.000000, Loss: -0.003661, Time/step: 3.025207
+2026-05-07 12:43:57,232:INFO: Epoch: 2/6, Step: 784/1017, Lr: 0.000000-0.000000, Loss: -0.003216, Time/step: 3.015163
+2026-05-07 12:49:01,261:INFO: Epoch: 2/6, Step: 884/1017, Lr: 0.000000-0.000000, Loss: -0.000144, Time/step: 3.040282
+2026-05-07 12:54:05,149:INFO: Epoch: 2/6, Step: 984/1017, Lr: 0.000000-0.000000, Loss: -0.003327, Time/step: 3.038872
+2026-05-07 12:55:45,797:INFO: Epoch 2/6 Finished, Train Loss: -0.002377
+2026-05-07 12:55:55,925:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-05-07 12:56:28,170:INFO:   Average Validation Loss: 2.3315
+2026-05-07 12:56:44,399:INFO: >>>  BLEU_1: 0.8499, BLEU_2: 0.7111, BLEU_3: 0.5656, BLEU_4: 0.4342
+2026-05-07 12:56:44,399:INFO: >>>  METEOR: 0.3092, ROUGE_L: 0.6379, CIDEr: 0.6117
+2026-05-07 12:56:54,159:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-05-07 12:56:54,163:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.6117, BLEU_4: 0.4342
+2026-05-07 13:00:19,210:INFO: Epoch: 3/6, Step: 68/1017, Lr: 0.000000-0.000000, Loss: -0.002481, Time/step: 2.047824
+2026-05-07 13:05:20,652:INFO: Epoch: 3/6, Step: 168/1017, Lr: 0.000000-0.000000, Loss: -0.002203, Time/step: 3.014411
+2026-05-07 13:10:24,376:INFO: Epoch: 3/6, Step: 268/1017, Lr: 0.000000-0.000000, Loss: -0.001895, Time/step: 3.037233
+2026-05-07 13:15:28,213:INFO: Epoch: 3/6, Step: 368/1017, Lr: 0.000000-0.000000, Loss: -0.001118, Time/step: 3.038369
+2026-05-07 13:20:32,036:INFO: Epoch: 3/6, Step: 468/1017, Lr: 0.000000-0.000000, Loss: -0.002714, Time/step: 3.038222
+2026-05-07 13:25:35,765:INFO: Epoch: 3/6, Step: 568/1017, Lr: 0.000000-0.000000, Loss: -0.002739, Time/step: 3.037293
+2026-05-07 13:30:38,640:INFO: Epoch: 3/6, Step: 668/1017, Lr: 0.000000-0.000000, Loss: -0.002256, Time/step: 3.028742
+2026-05-07 13:35:42,473:INFO: Epoch: 3/6, Step: 768/1017, Lr: 0.000000-0.000000, Loss: -0.004633, Time/step: 3.038323
+2026-05-07 13:40:45,467:INFO: Epoch: 3/6, Step: 868/1017, Lr: 0.000000-0.000000, Loss: -0.001775, Time/step: 3.029939
+2026-05-07 13:45:51,830:INFO: Epoch: 3/6, Step: 968/1017, Lr: 0.000000-0.000000, Loss: -0.003522, Time/step: 3.063614
+2026-05-07 13:48:21,243:INFO: Epoch 3/6 Finished, Train Loss: -0.002321
+2026-05-07 13:48:30,762:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-05-07 13:49:00,959:INFO:   Average Validation Loss: 2.3370
+2026-05-07 13:49:16,420:INFO: >>>  BLEU_1: 0.8487, BLEU_2: 0.7095, BLEU_3: 0.5640, BLEU_4: 0.4328
+2026-05-07 13:49:16,421:INFO: >>>  METEOR: 0.3090, ROUGE_L: 0.6376, CIDEr: 0.6111
+2026-05-07 13:49:16,433:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.6117, BLEU_4: 0.4342
+2026-05-07 13:51:54,983:INFO: Epoch: 4/6, Step: 52/1017, Lr: 0.000000-0.000000, Loss: -0.001917, Time/step: 1.583476
+2026-05-07 13:56:57,811:INFO: Epoch: 4/6, Step: 152/1017, Lr: 0.000000-0.000000, Loss: -0.001054, Time/step: 3.028267
+2026-05-07 14:02:00,127:INFO: Epoch: 4/6, Step: 252/1017, Lr: 0.000000-0.000000, Loss: -0.000698, Time/step: 3.023165
+2026-05-07 14:07:01,200:INFO: Epoch: 4/6, Step: 352/1017, Lr: 0.000000-0.000000, Loss: -0.001478, Time/step: 3.010724
+2026-05-07 14:12:02,574:INFO: Epoch: 4/6, Step: 452/1017, Lr: 0.000000-0.000000, Loss: -0.002134, Time/step: 3.013731
+2026-05-07 14:17:03,670:INFO: Epoch: 4/6, Step: 552/1017, Lr: 0.000000-0.000000, Loss: -0.001193, Time/step: 3.010956
+2026-05-07 14:22:05,055:INFO: Epoch: 4/6, Step: 652/1017, Lr: 0.000000-0.000000, Loss: -0.001344, Time/step: 3.013846
+2026-05-07 14:27:08,197:INFO: Epoch: 4/6, Step: 752/1017, Lr: 0.000000-0.000000, Loss: -0.003843, Time/step: 3.031410
+2026-05-07 14:32:09,972:INFO: Epoch: 4/6, Step: 852/1017, Lr: 0.000000-0.000000, Loss: -0.004004, Time/step: 3.017750
+2026-05-07 14:37:14,631:INFO: Epoch: 4/6, Step: 952/1017, Lr: 0.000000-0.000000, Loss: -0.003441, Time/step: 3.046579
+2026-05-07 14:40:32,809:INFO: Epoch 4/6 Finished, Train Loss: -0.002346
+2026-05-07 14:40:42,514:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-05-07 14:41:14,864:INFO:   Average Validation Loss: 2.3422
+2026-05-07 14:41:29,283:INFO: >>>  BLEU_1: 0.8490, BLEU_2: 0.7101, BLEU_3: 0.5643, BLEU_4: 0.4332
+2026-05-07 14:41:29,284:INFO: >>>  METEOR: 0.3087, ROUGE_L: 0.6378, CIDEr: 0.6113
+2026-05-07 14:41:29,296:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.6117, BLEU_4: 0.4342
+2026-05-07 14:43:18,390:INFO: Epoch: 5/6, Step: 36/1017, Lr: 0.000000-0.000000, Loss: -0.001748, Time/step: 1.089470
+2026-05-07 14:48:21,622:INFO: Epoch: 5/6, Step: 136/1017, Lr: 0.000000-0.000000, Loss: -0.003242, Time/step: 3.032315
+2026-05-07 14:53:25,206:INFO: Epoch: 5/6, Step: 236/1017, Lr: 0.000000-0.000000, Loss: -0.000358, Time/step: 3.035829
+2026-05-07 14:58:27,281:INFO: Epoch: 5/6, Step: 336/1017, Lr: 0.000000-0.000000, Loss: -0.001029, Time/step: 3.020744
+2026-05-07 15:03:30,655:INFO: Epoch: 5/6, Step: 436/1017, Lr: 0.000000-0.000000, Loss: -0.004202, Time/step: 3.033734
+2026-05-07 15:08:33,643:INFO: Epoch: 5/6, Step: 536/1017, Lr: 0.000000-0.000000, Loss: -0.004000, Time/step: 3.029877
+2026-05-07 15:13:36,341:INFO: Epoch: 5/6, Step: 636/1017, Lr: 0.000000-0.000000, Loss: -0.000672, Time/step: 3.026973
+2026-05-07 15:18:36,877:INFO: Epoch: 5/6, Step: 736/1017, Lr: 0.000000-0.000000, Loss: -0.004324, Time/step: 3.005358
+2026-05-07 15:23:37,775:INFO: Epoch: 5/6, Step: 836/1017, Lr: 0.000000-0.000000, Loss: -0.006881, Time/step: 3.008968
+2026-05-07 15:28:36,884:INFO: Epoch: 5/6, Step: 936/1017, Lr: 0.000000-0.000000, Loss: -0.000392, Time/step: 2.991089
+2026-05-07 15:32:38,508:INFO: Epoch 5/6 Finished, Train Loss: -0.002468
+2026-05-07 15:32:46,007:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-05-07 15:33:17,809:INFO:   Average Validation Loss: 2.3472
+2026-05-07 15:33:32,500:INFO: >>>  BLEU_1: 0.8491, BLEU_2: 0.7091, BLEU_3: 0.5636, BLEU_4: 0.4325
+2026-05-07 15:33:32,500:INFO: >>>  METEOR: 0.3089, ROUGE_L: 0.6380, CIDEr: 0.6111
+2026-05-07 15:33:32,513:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.6117, BLEU_4: 0.4342
+2026-05-07 15:34:34,149:INFO: Epoch: 6/6, Step: 20/1017, Lr: 0.000000-0.000000, Loss: -0.003347, Time/step: 0.614814
+2026-05-07 15:39:36,261:INFO: Epoch: 6/6, Step: 120/1017, Lr: 0.000000-0.000000, Loss: -0.005990, Time/step: 3.021119
+2026-05-07 15:44:36,580:INFO: Epoch: 6/6, Step: 220/1017, Lr: 0.000000-0.000000, Loss: -0.002335, Time/step: 3.003178
+2026-05-07 15:49:37,640:INFO: Epoch: 6/6, Step: 320/1017, Lr: 0.000000-0.000000, Loss: -0.002483, Time/step: 3.010596
+2026-05-07 15:54:40,605:INFO: Epoch: 6/6, Step: 420/1017, Lr: 0.000000-0.000000, Loss: -0.000433, Time/step: 3.029648
+2026-05-07 15:59:39,929:INFO: Epoch: 6/6, Step: 520/1017, Lr: 0.000000-0.000000, Loss: -0.002883, Time/step: 2.993230
+2026-05-07 16:04:40,897:INFO: Epoch: 6/6, Step: 620/1017, Lr: 0.000000-0.000000, Loss: -0.002444, Time/step: 3.009675
+2026-05-07 16:09:40,416:INFO: Epoch: 6/6, Step: 720/1017, Lr: 0.000000-0.000000, Loss: -0.004413, Time/step: 2.995181
+2026-05-07 16:14:40,926:INFO: Epoch: 6/6, Step: 820/1017, Lr: 0.000000-0.000000, Loss: -0.007011, Time/step: 3.005100
+2026-05-07 16:19:41,150:INFO: Epoch: 6/6, Step: 920/1017, Lr: 0.000000-0.000000, Loss: -0.003036, Time/step: 3.002236
+2026-05-07 16:24:30,309:INFO: Epoch 6/6 Finished, Train Loss: -0.002487
+2026-05-07 16:24:37,327:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.last.0
+2026-05-07 16:25:09,845:INFO:   Average Validation Loss: 2.3518
+2026-05-07 16:25:24,927:INFO: >>>  BLEU_1: 0.8498, BLEU_2: 0.7097, BLEU_3: 0.5643, BLEU_4: 0.4332
+2026-05-07 16:25:24,928:INFO: >>>  METEOR: 0.3095, ROUGE_L: 0.6387, CIDEr: 0.6118
+2026-05-07 16:25:32,130:INFO: Model saved to ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-05-07 16:25:32,131:INFO: The best model is: ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0, CIDEr: 0.6118, BLEU_4: 0.4332
+2026-05-07 16:25:36,475:INFO: Model loaded from ckpts/ckpt_msrvtt_caption/pytorch_model.bin.best.0
+2026-05-07 16:25:36,475:INFO: loading archive file /workspace/project/video-captioning/modules/bert-base-uncased
+2026-05-07 16:25:36,476:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-05-07 16:25:36,476:INFO: loading archive file /workspace/project/video-captioning/modules/visual-base
+2026-05-07 16:25:36,476:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 1,
+  "type_vocab_size": 2,
+  "vocab_size": 1024
+}
+
+2026-05-07 16:25:36,476:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/visual-base/visual_pytorch_model.bin
+2026-05-07 16:25:36,476:WARNING: Set visual_config.vocab_size: 768.
+2026-05-07 16:25:36,476:INFO: loading archive file /workspace/project/video-captioning/modules/cross-base
+2026-05-07 16:25:36,476:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_position_embeddings": 1024,
+  "num_attention_heads": 12,
+  "num_hidden_layers": 2,
+  "type_vocab_size": 2,
+  "vocab_size": 768
+}
+
+2026-05-07 16:25:36,476:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/cross-base/cross_pytorch_model.bin
+2026-05-07 16:25:36,476:INFO: loading archive file /workspace/project/video-captioning/modules/decoder-base
+2026-05-07 16:25:36,476:INFO: Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "max_target_embeddings": 512,
+  "num_attention_heads": 12,
+  "num_decoder_layers": 1,
+  "num_hidden_layers": 12,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+2026-05-07 16:25:36,476:INFO: Weight doesn't exsits. /workspace/project/video-captioning/modules/decoder-base/decoder_pytorch_model.bin
+2026-05-07 16:25:36,476:WARNING: Stage-One:False, Stage-Two:True
+2026-05-07 16:25:36,476:WARNING: Set bert_config.num_hidden_layers: 12.
+2026-05-07 16:25:38,146:WARNING: Set visual_config.num_hidden_layers: 6.
+2026-05-07 16:25:38,844:WARNING: Freeze vision encoder.
+2026-05-07 16:25:38,844:WARNING: Set cross_config.num_hidden_layers: 2.
+2026-05-07 16:25:39,124:WARNING: Add QFormer visual projection: 768 -> 1408.
+2026-05-07 16:25:40,763:INFO: QFormer checkpoint shards selected from Salesforce/blip2-opt-6.7b-coco: ['model-00001-of-00004.safetensors']
+2026-05-07 16:25:41,402:INFO: Loaded QFormer checkpoint from Salesforce/blip2-opt-6.7b-coco: tensors=144 query_tokens=True missing=192 unexpected=0 skipped_shape=0
+2026-05-07 16:26:00,009:WARNING: Load init_model weights only for bert., visual., Qformer., query_tokens, qformer_visual_proj., t5_model., t5_proj., normalize_video. Skipped 40 other tensors.
+2026-05-07 16:26:19,310:INFO: --------------------
+2026-05-07 16:26:19,310:INFO: Weights of UniVL not initialized from pretrained model: 
+   cross.embeddings.position_embeddings.weight
+   cross.embeddings.token_type_embeddings.weight
+   cross.embeddings.LayerNorm.weight
+   cross.embeddings.LayerNorm.bias
+   cross.encoder.layer.0.attention.self.query.weight
+   cross.encoder.layer.0.attention.self.query.bias
+   cross.encoder.layer.0.attention.self.key.weight
+   cross.encoder.layer.0.attention.self.key.bias
+   cross.encoder.layer.0.attention.self.value.weight
+   cross.encoder.layer.0.attention.self.value.bias
+   cross.encoder.layer.0.attention.output.dense.weight
+   cross.encoder.layer.0.attention.output.dense.bias
+   cross.encoder.layer.0.attention.output.LayerNorm.weight
+   cross.encoder.layer.0.attention.output.LayerNorm.bias
+   cross.encoder.layer.0.intermediate.dense.weight
+   cross.encoder.layer.0.intermediate.dense.bias
+   cross.encoder.layer.0.output.dense.weight
+   cross.encoder.layer.0.output.dense.bias
+   cross.encoder.layer.0.output.LayerNorm.weight
+   cross.encoder.layer.0.output.LayerNorm.bias
+   cross.encoder.layer.1.attention.self.query.weight
+   cross.encoder.layer.1.attention.self.query.bias
+   cross.encoder.layer.1.attention.self.key.weight
+   cross.encoder.layer.1.attention.self.key.bias
+   cross.encoder.layer.1.attention.self.value.weight
+   cross.encoder.layer.1.attention.self.value.bias
+   cross.encoder.layer.1.attention.output.dense.weight
+   cross.encoder.layer.1.attention.output.dense.bias
+   cross.encoder.layer.1.attention.output.LayerNorm.weight
+   cross.encoder.layer.1.attention.output.LayerNorm.bias
+   cross.encoder.layer.1.intermediate.dense.weight
+   cross.encoder.layer.1.intermediate.dense.bias
+   cross.encoder.layer.1.output.dense.weight
+   cross.encoder.layer.1.output.dense.bias
+   cross.encoder.layer.1.output.LayerNorm.weight
+   cross.encoder.layer.1.output.LayerNorm.bias
+   cross.pooler.dense.weight
+   cross.pooler.dense.bias
+   similarity_dense.weight
+   similarity_dense.bias
+2026-05-07 16:26:55,787:INFO:   Average Validation Loss: 2.3518
+2026-05-07 16:27:09,955:INFO: >>>  BLEU_1: 0.8498, BLEU_2: 0.7097, BLEU_3: 0.5643, BLEU_4: 0.4332
+2026-05-07 16:27:09,955:INFO: >>>  METEOR: 0.3095, ROUGE_L: 0.6387, CIDEr: 0.6118

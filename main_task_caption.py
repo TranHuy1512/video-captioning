@@ -99,6 +99,12 @@ def get_args(description='UniVL on Caption Task'):
                         help="Beam size used for deterministic caption generation during eval/test.")
     parser.add_argument('--scst_num_samples', type=int, default=None,
                         help="Number of beam candidates per video for SCST training.")
+    parser.add_argument('--scst_diversity_weight', type=float, default=0.0,
+                        help="Weight for the batch-level diversity penalty subtracted from the SCST "
+                             "CIDEr reward (0.0 to disable, fully backward compatible). Penalises a "
+                             "candidate caption that n-gram-overlaps heavily with another video's "
+                             "generated caption in the same batch, to counter mode collapse onto a "
+                             "small set of generic templates (e.g. 'a man is talking'). Default: 0.0")
     parser.add_argument('--beam_size', type=int, default=None,
                         help="Deprecated alias for both --eval_beam_size and --scst_num_samples.")
     parser.add_argument('--t5_model', type=str, default='google/flan-t5-xl', help="T5 model name.")
